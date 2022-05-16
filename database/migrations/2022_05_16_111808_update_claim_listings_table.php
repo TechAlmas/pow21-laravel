@@ -3,9 +3,21 @@
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Doctrine\DBAL\Types\StringType;
+use Doctrine\DBAL\Types\Type;
+use Illuminate\Support\Facades\DB;
 
-class AlterTableClaimListingsChangeStatus extends Migration
+class UpdateClaimListingsTable extends Migration
 {
+    public function __construct()
+    {
+        if (! Type::hasType('enum')) {
+            Type::addType('enum', StringType::class);
+        }
+        // For point types
+        // DB::getDoctrineSchemaManager()->getDatabasePlatform()->registerDoctrineTypeMapping('point', 'string');
+        DB::getDoctrineSchemaManager()->getDatabasePlatform()->registerDoctrineTypeMapping('enum', 'string');
+    }
     /**
      * Run the migrations.
      *
