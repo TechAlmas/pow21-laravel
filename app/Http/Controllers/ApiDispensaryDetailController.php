@@ -41,8 +41,8 @@
 				{
 					$checkClaimStatus = DB::table('claim_listings')->where('listing_id',$disp->id)->first();
 					
-					$disp->claim_status = !empty($checkClaimStatus) ? $checkClaimStatus->status : 2;
-					
+					$disp->claim_status = !empty($checkClaimStatus) ? $checkClaimStatus->status : 'Unverified';
+
 					$count = DB::table('master_dispensary_followers')
 								  ->where('user_id',$postdata['user_id']) 
 								  ->where('dispansary_id',$disp->disp_id) 

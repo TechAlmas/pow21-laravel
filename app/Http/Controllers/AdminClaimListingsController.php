@@ -49,7 +49,7 @@
 			$this->form[] = ['label'=>'E Mail','name'=>'e_mail','type'=>'text','validation'=>'required|min:1|max:255','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Verification Details','name'=>'verification_details','type'=>'textarea','validation'=>'required|string|min:5|max:5000','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Files','name'=>'files','type'=>'upload','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'Status','name'=>'status','type'=>'select2','width'=>'col-sm-10','dataenum'=>'1|Verified;2|Unverified;3|Pending'];
+			$this->form[] = ['label'=>'Status','name'=>'status','type'=>'select2','width'=>'col-sm-10','dataenum'=>'Verified|Verified;Unverified|Unverified;Pending|Pending'];
 			# END FORM DO NOT REMOVE THIS LINE
 
 			# OLD START FORM
@@ -284,18 +284,22 @@
 	    */
 	    public function hook_query_index(&$query) {
 	    	$filter_column = Request::get('filter_column');
-	    	
 	    	$new_status = array();
-	    	if($filter_column['claim_listings.status']['value']){
-		    	if($filter_column['claim_listings.status']['value'] == 'Verified'){
-		    		$filter_column['claim_listings.status']['value'] = 1;
-		    	}elseif($filter_column['claim_listings.status']['value'] == 'Unverified'){
-		    		$filter_column['claim_listings.status']['value'] = 2;
-		    	}else{
-		    		$filter_column['claim_listings.status']['value'] = 3;
-		    	}
-		    }
-	    	Request::offsetSet('filter_column',$filter_column);
+			if(!empty($filter_column)){
+				// if($filter_column['claim_listings.status']['value']){
+				// 	if($filter_column['claim_listings.status']['value'] == 'Verified'){
+				// 		$filter_column['claim_listings.status']['value'] = 1;
+				// 	}elseif($filter_column['claim_listings.status']['value'] == 'Unverified'){
+				// 		$filter_column['claim_listings.status']['value'] = 2;
+				// 	}else{
+				// 		$filter_column['claim_listings.status']['value'] = 3;
+				// 	}
+				// }
+				Request::offsetSet('filter_column',$filter_column);
+			}else{
+				$query->where('claim_listings.status','Pending');
+			}
+	    	
 	    	//dd(Request::get('filter_column'));
 	        //Your code here
 			
@@ -312,10 +316,10 @@
 	    	//Your code here
 	    	if($column_index == 7){
 	    		switch($column_value) {
-				   	case '1':
+				   	case 'Verified':
 						$column_value = "<span class='label label-success'>Verified</span>";
 				   		break;
-				   	case '3':
+				   	case 'Pending':
 						$column_value = "<span class='label label-warning'>Pending</span>";
 				   		break;
 				   	default:
