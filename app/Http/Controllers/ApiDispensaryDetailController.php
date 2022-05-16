@@ -34,11 +34,15 @@
 		    			->join('master_cities','master_cities.id','master_locations.city_id')
 		    			->leftJoin('master_dispensary_followers', 'master_locations.id', '=', 'master_dispensary_followers.dispansary_id')
 						->where('slug',$postdata['slug'])
-		    			->select("master_locations.*",DB::raw("FORMAT(master_locations.ratings,2) as ratings"),'master_states.state as state_name_table','master_cities.city as city_name_table','master_locations.id as disp_id',DB::raw("count(master_dispensary_followers.id) as follow_count"))
+		    			->select("master_locations.*",DB::raw("FORMAT(master_locations.ratings,2) as ratings"),'master_states.state as state_name_table','master_cities.city as city_name_table','master_locations.id as disp_id',DB::raw("count(master_dispensary_followers.id) as follow_count"),DB::raw('null as claim_status'))
 		    			->first();
 				
 				if(!empty($disp))
 				{
+					$checkClaimStatus = DB::table('claim_listings')->where('listing_id',$disp->id)->first();
+					
+					$disp->claim_status = !empty($checkClaimStatus) ? $checkClaimStatus->status : 'Unverified';
+
 					$count = DB::table('master_dispensary_followers')
 								  ->where('user_id',$postdata['user_id']) 
 								  ->where('dispansary_id',$disp->disp_id) 
