@@ -49,14 +49,14 @@
 				if(!empty($posts['listing_id'])){
 
 					if(!empty($posts['e_mail'])){
-						$checkIfEmailExists = DB::table('claim_listings')->where('listing_id',$posts['listing_id'])->where('e_mail',$posts['e_mail'])->first();
+						$checkIfEmailExists = DB::table($this->table)->where('listing_id',$posts['listing_id'])->where('e_mail',$posts['e_mail'])->first();
 						if(!empty($checkIfEmailExists)){
 							$result['data']['message'] = "The email already exists";
 							return response()->json($result, 200);
 						}
 					}
 
-					$checkIfClaimAlreadyExists = DB::table('claim_listings')->where('listing_id',$posts['listing_id'])->first();
+					$checkIfClaimAlreadyExists = DB::table($this->table)->where('listing_id',$posts['listing_id'])->first();
 					if(!empty($checkIfClaimAlreadyExists)){
 						$result['data']['message'] = "The claim request already exists for this store.";
 						$result['data']['e_mail'] = $checkIfClaimAlreadyExists->e_mail;
