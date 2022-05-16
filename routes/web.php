@@ -65,4 +65,8 @@ Route::get('scrape-bcc', ['as' => 'scrape.bcc', 'uses' => 'ScrapeBccController@i
 	Route::get('scrape-bcc-category-details/{website_slug}/{cat_id}', ['as' => 'scrape.bcc.scrapeCategoryDetails', 'uses' => 'ScrapeBccController@scrapeCategoryDetails']);
 	
 	Route::get('load_brands', ['as' => 'scrape.bcc.load_brands', 'uses' => 'AdminBccStrainsController@load_brands']);
+
+	//Claim Listing related routes
+	Route::get('claim_listings/change-status/{status}/{dataId}', ['as' => 'ClaimListing.changeStatus', 'uses' => 'AdminClaimListingsController@changeStatus']);
+
 });

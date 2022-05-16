@@ -5,6 +5,11 @@
 	use DB;
 	use CRUDBooster;
 	use File;
+	use Illuminate\Support\Facades\Hash;
+	use App\User;
+	use App\DispensoryUser;
+	
+	use crocodicstudio\crudbooster\helpers\MailHelper;
 
 	class AdminClaimListingsController extends \crocodicstudio\crudbooster\controllers\CBController {
 
@@ -91,8 +96,8 @@
 	        | 
 	        */
 	        $this->addaction = array();
-			$this->addaction[] = ['url'=>CRUDBooster::mainpath('#'),'icon'=>'fa fa-check','color'=>'success'];
-            $this->addaction[] = ['url'=>CRUDBooster::mainpath('#'),'icon'=>'fa fa-close','color'=>'danger','confirmation'=>true];
+			$this->addaction[] = ['url'=>CRUDBooster::mainpath('change-status/approve/[id]'),'icon'=>'fa fa-check','color'=>'success','confirmation'=>true];
+            $this->addaction[] = ['url'=>CRUDBooster::mainpath('change-status/reject/[id]'),'icon'=>'fa fa-close','color'=>'danger','confirmation'=>true];
 	        
 
 
@@ -422,6 +427,45 @@
 	        //Your code here
 
 	    }
+
+		public function changeStatus($status,$dataId){
+			$checkData = DB::table('claim_listings')->where('id',$dataId)->first();
+			if(!empty($checkData)){
+				if($status == 'approve'){
+					DB::table('claim_listings')->where('id',$dataId)->update(['status'=>'Verified']);
+					$checkIfUserAlreadyExists = DB::table('cms_users')->where('email',$checkData->e_mail)->first();
+					if(empty($checkIfUserAlreadyExists)){
+						$str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+						$shfl = str_shuffle($str);
+						$pwd = substr($shfl,0,8);
+						$userData                  =  [];
+						$userData['name']          =  $checkData->first_name ." ". $checkData->last_name;
+						$userData['email']         =  $checkData->e_mail;
+						$userData['password']      =  Hash::make($pwd);
+						$userData['status']        =  'Active';  
+						$userData['id_cms_privileges'] =  6 ;  
+
+						$user = User::create($userData);
+
+						//Assigning User
+						DispensoryUser::create(['user_id'=>$user->id, 'dispansary_id' => $checkData->listing_id]);
+
+					}
+					//Sending Mail To the User
+					// $data = ['email'=>$checkData->e_mail,'password' => $pwd];
+					// CRUDBooster::sendEmail(['to'=>$checkData->e_mail,'data'=>$data,'template'=>'claim_listing_approve']);
+				}else if($status == 'reject'){
+					DB::table('claim_listings')->where('id',$dataId)->update(['status'=>'Unverified']);
+
+					//Sending Mail To the User
+					// $data = ['name'=>$checkData->first_name];
+					// CRUDBooster::sendEmail(['to'=>$checkData->e_mail,'data'=>$data,'template'=>'claim_listing_reject']);
+				}
+				CRUDBooster::redirectBack("Status changed successfully", "success");
+			}else{
+				CRUDBooster::redirect(CRUDBooster::adminPath('claim_listings'),trans("Something Went Wrong"));
+			}
+		}
 
 
 
