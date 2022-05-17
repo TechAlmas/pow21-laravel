@@ -455,11 +455,13 @@
 					// $data = ['email'=>$checkData->e_mail,'password' => $pwd];
 					// CRUDBooster::sendEmail(['to'=>$checkData->e_mail,'data'=>$data,'template'=>'claim_listing_approve']);
 				}else if($status == 'reject'){
+					// Sending Mail To the User
+					
+					$data = ['name'=>$checkData->first_name];
+					CRUDBooster::sendEmail(['to'=>$checkData->e_mail,'data'=>$data,'template'=>'claim_listing_reject']);
+
 					DB::table('claim_listings')->where('id',$dataId)->update(['status'=>'Unverified']);
 
-					//Sending Mail To the User
-					// $data = ['name'=>$checkData->first_name];
-					// CRUDBooster::sendEmail(['to'=>$checkData->e_mail,'data'=>$data,'template'=>'claim_listing_reject']);
 				}
 				CRUDBooster::redirectBack("Status changed successfully", "success");
 			}else{
