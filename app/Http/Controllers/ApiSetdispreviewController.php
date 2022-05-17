@@ -26,7 +26,13 @@
 		    }
 
 		    public function hook_after($postdata,&$result) {
-		    	
+		    	if(!empty($result['id'])){
+					$getResultData = DB::table($this->table.' as master_dispensary_review')->where('id',$result['id'])->select('master_dispensary_review.*',DB::raw('(SELECT count(id) from master_dispensary_reviews WHERE disp_id=master_dispensary_review.disp_id) as total_reviews'),DB::raw('(SELECT AVG(rating) from master_dispensary_reviews WHERE disp_id=master_dispensary_review.disp_id) as avg_rating'))->first();
+					if(!empty($getResultData)){
+						DB::table('master_locations')->where('id',$getResultData->disp_id)->update(['ratings'=>$getResultData->avg_rating , 'reviews'=>$getResultData->total_reviews ]);
+					}
+				}
+
 
 		    }
 
