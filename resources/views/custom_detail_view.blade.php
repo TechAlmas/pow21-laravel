@@ -39,10 +39,24 @@
 							<tr>
 								<td><b>Files</b></td>
 								<td>
-								    <a href="{{asset('/uploads/1/2019-02/logo_default_dispensary.png')}}">
+									@if(!empty($file))
+									@foreach($file as $fileVal)
+									@if(!empty($fileVal))
+									<div class="image-view">
+
+										<a href="{{asset('/uploads/claims/').'/'.$fileVal}}" class="mr-3" target="_blank">
+										   {{$fileVal}}
+										</a>
+									</div>
+									@endif
+									@endforeach
+									@else
+									<span class="text-center">No Files Uploaded</span>
+									@endif
+								    <!-- <a href="{{asset('/uploads/1/2019-02/logo_default_dispensary.png')}}" target="_blank">
 									   <img src="{{ asset('/uploads/1/2019-02/logo_default_dispensary.png') }}" height="100" width="100">
 									</a>
-								    <img src="{{ storage_path('/static/admin/storage/app/uploads/claims/6488-2.png') }}" height="100" width="100"></td>
+								    <img src="{{ storage_path('/static/admin/storage/app/uploads/claims/6488-2.png') }}" height="100" width="100"></td> -->
 								
 								<!--<td>{{ $row->files}}</td>-->
 							</tr>
