@@ -97,8 +97,8 @@
 	        | 
 	        */
 	        $this->addaction = array();
-			$this->addaction[] = ['url'=>CRUDBooster::mainpath('change-status/approve/[id]'),'label'=>'Approve','color'=>'success','confirmation'=>true];
-            $this->addaction[] = ['url'=>CRUDBooster::mainpath('change-status/reject/[id]'),'label'=>'Reject','color'=>'danger','confirmation'=>true];
+			$this->addaction[] = ['url'=>CRUDBooster::mainpath('change-status/approve/[id]'),'icon'=>'fa fa-check','color'=>'success','confirmation'=>true];
+            $this->addaction[] = ['url'=>CRUDBooster::mainpath('change-status/reject/[id]'),'icon'=>'fa fa-close','color'=>'danger','confirmation'=>true];
 	        
 
 

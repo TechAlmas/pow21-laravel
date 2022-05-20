@@ -12,6 +12,7 @@
 				<div class="table-responsive">
 					<table id="table-detail" class="table table-striped">
 						<tbody>
+						
 							<tr>
 								<td><b>Id</b></td>
 								<td>{{ $row->id}}</td>
@@ -63,6 +64,40 @@
 							<tr>
 								<td><b>Status</b></td>
 								<td>{{ $row->status}}</td>
+							</tr>
+							<tr>
+							@if(!empty($row->status) && $row->status == 'Pending')
+								<td><b>Action</b></td>
+								<td>
+									<a class="btn btn-xs btn-success" title="Approve" onclick="
+									swal({   
+										title: &quot;Confirmation&quot;,
+										text: &quot;Are you sure want to do this action?&quot;,
+										type: &quot;warning&quot;,
+										showCancelButton: true,
+										confirmButtonColor: &quot;#DD6B55&quot;,
+										confirmButtonText: &quot;Yes!&quot;,
+										cancelButtonText: &quot;No&quot;,
+										closeOnConfirm: true, }, 
+										function(){  location.href='{{\CRUDBooster::mainpath('change-status/approve/').$row->id}}'});        
+
+									" href="javascript:;"><i class=""></i> Approve</a>
+									<a class="btn btn-xs btn-danger" title="Reject" onclick="
+										swal({   
+											title: &quot;Confirmation&quot;,
+											text: &quot;Are you sure want to do this action?&quot;,
+											type: &quot;warning&quot;,
+											showCancelButton: true,
+											confirmButtonColor: &quot;#DD6B55&quot;,
+											confirmButtonText: &quot;Yes!&quot;,
+											cancelButtonText: &quot;No&quot;,
+											closeOnConfirm: true, }, 
+											function(){  location.href='{{\CRUDBooster::mainpath('change-status/reject/').$row->id}}'});        
+
+										" href="javascript:;"><i class=""></i> Reject</a>
+								</td>
+								
+							@endif
 							</tr>
 						</tbody>
 					</table>
