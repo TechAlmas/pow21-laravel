@@ -39,9 +39,10 @@
 			$this->col[] = ["label"=>"Country","name"=>"country"];
 			$this->col[] = ["label"=>"Email","name"=>"email"];
 			# END COLUMNS DO NOT REMOVE THIS LINE
-
+			
 			# START FORM DO NOT REMOVE THIS LINE
 			$this->form = [];
+			$this->form[] = ['label'=>'Status','name'=>'status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'1|Active;0|InActive'];
 			$this->form[] = ['label'=>'Name','name'=>'name','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Address','name'=>'address','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Address 2','name'=>'address2','type'=>'text','width'=>'col-sm-10'];
@@ -55,16 +56,10 @@
 			$this->form[] = ['label'=>'Email','name'=>'email','type'=>'email','validation'=>'email','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Email 2','name'=>'email2','type'=>'text','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Phone','name'=>'phone','type'=>'text','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'Status','name'=>'status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'1|Active;0|InActive'];
-			$icon_columns[] = ['label'=>'Text','name'=>'option_value','type'=>'text','required'=>false];
-			$icon_columns[] = ['label'=>'Icon','name'=>'option_icon','type'=>'datamodal','width'=>'col-sm-9','datamodal_table'=>'master_icons','datamodal_columns'=>'name','datamodal_size'=>'large','datamodal_columns_alias_name'=>'"Name"'];
-			//$this->form[] = ['label'=>'Store Meta','name'=>'icon','type'=>'child','validation'=>'required|string','width'=>'col-sm-9','columns'=>$icon_columns,'table'=>'test','foreign_key'=>'dispansary_id'];
-			$this->form[] = ['label'=>'Store Meta','name'=>'user','type'=>'child','validation'=>'string','width'=>'col-sm-9','columns'=>$icon_columns,'table'=>'dispensaries_store_icons','foreign_key'=>'dispansary_id'];
-
-			$user_columns[] = ['label'=>'Assign Business','name'=>'user_id','type'=>'datamodal','width'=>'col-sm-9','datamodal_table'=>'cms_users','datamodal_columns'=>'name','datamodal_size'=>'large','datamodal_columns_alias_name'=>'"Name"'];
-			$this->form[] = ['label'=>'Business Owners','name'=>'user','type'=>'child','width'=>'col-sm-9','columns'=>$user_columns,'table'=>'dispensaries_users','foreign_key'=>'dispansary_id'];
-
-
+			// $this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','datatable'=>'claim_listings,status'];
+			// $this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','width'=>'col-sm-10'];
+			// $this->form[] = ['label'=>'Store Meta','name'=>'user','type'=>'child','validation'=>'string','width'=>'col-sm-9','table'=>'dispensaries_store_icons','foreign_key'=>'dispansary_id'];
+			// $this->form[] = ['label'=>'Business Owners','name'=>'user','type'=>'child','width'=>'col-sm-9','table'=>'dispensaries_users','foreign_key'=>'dispansary_id'];
 			# END FORM DO NOT REMOVE THIS LINE
 
 			# OLD START FORM
@@ -83,9 +78,14 @@
 			//$this->form[] = ['label'=>'Email 2','name'=>'email2','type'=>'text','width'=>'col-sm-10'];
 			//$this->form[] = ['label'=>'Phone','name'=>'phone','type'=>'text','width'=>'col-sm-10'];
 			//$this->form[] = ['label'=>'Status','name'=>'status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'1|Active;0|InActive'];
-			//$this->form[] = ['label'=>'icon','name'=>'icon','type'=>'child','validation'=>'required|string','width'=>'col-sm-9'];
-			//$this->form[] = ['label'=>'user','name'=>'user','type'=>'child','validation'=>'required|string','width'=>'col-sm-9'];
-			//$this->form[] = ['label'=>'icon','name'=>'test_icon','type'=>'datamodal','validation'=>'required','width'=>'col-sm-9','datamodal_table'=>'master_icons','datamodal_columns'=>'name','datamodal_size'=>'large'];
+			//$this->form[] = ['label'=>'Claim Status','name'=>'id','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'Verified|Verified;Unverified|Unverified;Pending|Pending','join'=>'claim_listings,listing_id','showInDetail'=>true];
+			//$icon_columns[] = ['label'=>'Text','name'=>'option_value','type'=>'text','required'=>false];
+			//$icon_columns[] = ['label'=>'Icon','name'=>'option_icon','type'=>'datamodal','width'=>'col-sm-9','datamodal_table'=>'master_icons','datamodal_columns'=>'name','datamodal_size'=>'large','datamodal_columns_alias_name'=>'"Name"'];
+			////$this->form[] = ['label'=>'Store Meta','name'=>'icon','type'=>'child','validation'=>'required|string','width'=>'col-sm-9','columns'=>$icon_columns,'table'=>'test','foreign_key'=>'dispansary_id'];
+			//$this->form[] = ['label'=>'Store Meta','name'=>'user','type'=>'child','validation'=>'string','width'=>'col-sm-9','columns'=>$icon_columns,'table'=>'dispensaries_store_icons','foreign_key'=>'dispansary_id'];
+			//
+			//$user_columns[] = ['label'=>'Assign Business','name'=>'user_id','type'=>'datamodal','width'=>'col-sm-9','datamodal_table'=>'cms_users','datamodal_columns'=>'name','datamodal_size'=>'large','datamodal_columns_alias_name'=>'"Name"'];
+			//$this->form[] = ['label'=>'Business Owners','name'=>'user','type'=>'child','width'=>'col-sm-9','columns'=>$user_columns,'table'=>'dispensaries_users','foreign_key'=>'dispansary_id'];
 			# OLD END FORM
 
 			/* 

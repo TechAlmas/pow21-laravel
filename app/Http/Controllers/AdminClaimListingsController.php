@@ -42,6 +42,7 @@
 			$this->col[] = ["label"=>"Telephone","name"=>"telephone"];
 			$this->col[] = ["label"=>"E Mail","name"=>"e_mail"];
 			$this->col[] = ["label"=>"Verification Details","name"=>"verification_details"];
+			$this->col[] = ["label"=>"Submission Date","name"=>"created_at"];
 			$this->col[] = ["label"=>"Status","name"=>"status"];
 			# END COLUMNS DO NOT REMOVE THIS LINE
 
@@ -261,7 +262,7 @@
 					//public_html/admin/storage/app/uploads/claims
             }
 			$data['file'] = $unserializedData;
-			//dd($data);
+			// dd($data);
 			$this->cbView('custom_detail_view',$data);
 		}
 
@@ -319,7 +320,7 @@
 	    */    
 	    public function hook_row_index($column_index,&$column_value) {	        
 	    	//Your code here
-	    	if($column_index == 7){
+	    	if($column_index == 8){
 	    		switch($column_value) {
 				   	case 'Verified':
 						$column_value = "<span class='label label-success'>Verified</span>";
