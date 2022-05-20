@@ -36,6 +36,24 @@
 		        //}
 		        //unset($postdata['file']);
 		        //unset($_FILES);
+
+				$this->files = $_FILES;
+		        $this->postdata = $postdata;
+		        if($_FILES['store_images']){
+		        	$uploaded_files = array();
+		        	for ($i=0; $i < count($_FILES['store_images']); $i++) {
+		        		$path = storage_path('app')."/uploads/store_images/";
+		        		$filename = $postdata['listing_id'].'-'.$_FILES['store_images']['name'][$i];
+		        		$tmp_name = $_FILES['store_images']['tmp_name'][$i];
+		        		$destinationfile = $path.$filename;
+		        		if(move_uploaded_file($tmp_name,$destinationfile)){
+			        		//$postdata['file'] = "uploads/dispensaries/".$filename;
+							$uploaded_files[] = $filename;
+			        	}
+		        		$postdata['store_images'] = serialize($uploaded_files);
+		        	}
+		        }
+		        // unset($postdata['file']);
 		    }
 
 		    public function hook_query(&$query) {
