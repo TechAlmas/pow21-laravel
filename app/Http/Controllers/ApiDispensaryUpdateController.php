@@ -3,7 +3,7 @@
 		use Session;
 		use Request;
 		use DB;
-		use CRUDBooster;
+		use CRUDBooster,File;
 		use App\MasterLocation;
 
 		class ApiDispensaryUpdateController extends \crocodicstudio\crudbooster\controllers\ApiController {
@@ -36,23 +36,84 @@
 		        //}
 		        //unset($postdata['file']);
 		        //unset($_FILES);
-
+				
 				$this->files = $_FILES;
 		        $this->postdata = $postdata;
 		        if($_FILES['store_images']){
-		        	$uploaded_files = array();
+					$uploaded_files = array();
+					if(!empty($postdata['id'])){
+						$getStoreData = DB::table($this->table)->where('id',$postdata['id'])->first();
+						if(!empty($getStoreData->store_images)){
+							$storeImages = unserialize($getStoreData->store_images);
+						}
+					}
 		        	for ($i=0; $i < count($_FILES['store_images']); $i++) {
-		        		$path = storage_path('app')."/uploads/store_images/";
-		        		$filename = $postdata['listing_id'].'-'.$_FILES['store_images']['name'][$i];
+						
+						$path = storage_path('app')."/uploads/store_images/";
+		        		$filename = $postdata['id'].'-'.$_FILES['store_images']['name'][$i];
 		        		$tmp_name = $_FILES['store_images']['tmp_name'][$i];
 		        		$destinationfile = $path.$filename;
-		        		if(move_uploaded_file($tmp_name,$destinationfile)){
-			        		//$postdata['file'] = "uploads/dispensaries/".$filename;
-							$uploaded_files[] = $filename;
-			        	}
+						if(!File::isDirectory($path)){
+
+							File::makeDirectory($path, 0777, true, true);
+							
+						}
+						if(!empty($storeImages)){
+							if(!in_array($filename,$storeImages)){
+								if(move_uploaded_file($tmp_name,$destinationfile)){
+									//$postdata['file'] = "uploads/dispensaries/".$filename;
+									$uploaded_files[] = $filename;
+								}
+							}
+						}else{
+							if(move_uploaded_file($tmp_name,$destinationfile)){
+								//$postdata['file'] = "uploads/dispensaries/".$filename;
+								$uploaded_files[] = $filename;
+							}
+						}
+		        		
 		        		$postdata['store_images'] = serialize($uploaded_files);
 		        	}
 		        }
+				// print_r($postdata['store_images']);die;
+
+				if(!empty($postdata['id'])){
+					$storeImages = [];
+					$getStoreData = DB::table($this->table)->where('id',$postdata['id'])->first();
+					if(!empty($getStoreData->store_images)){
+						$storeImages = unserialize($getStoreData->store_images);
+							if(!empty($postdata['removed_images'])){
+
+								foreach($postdata['removed_images'] as $imageVal){
+									if(in_array($imageVal,$storeImages)){
+										if (($key = array_search($imageVal, $storeImages)) !== false) {
+											unset($storeImages[$key]);
+											$path = storage_path('app')."/uploads/store_images/";
+											$filename = $postdata['id'].'-'.$imageVal;
+											$filePath = $path.$filename;
+											if(file_exists($filePath)){
+												unlink($filePath);
+											}
+										}
+										
+									}
+								}
+							}
+						
+					}
+					if(!empty($postdata['store_images'])){
+						if(!empty($storeImages)){
+							$storeImagesData = unserialize($postdata['store_images']);
+							foreach($storeImages as $iVal){
+								$storeImagesData[] = $iVal;
+							}
+							$postdata['store_images'] = serialize($storeImagesData);
+						}
+					}else{
+						$postdata['store_images'] = serialize($storeImages);
+					}
+					unset($postdata['removed_images']);
+				}
 		        // unset($postdata['file']);
 		    }
 

@@ -28,7 +28,7 @@
 		    }
 
 		    public function hook_after($postdata,&$result) {
-		    	
+		    
 		    	$disp = DB::table('master_locations')
 		    			->join('master_states','master_states.id','master_locations.state_id')
 		    			->join('master_cities','master_cities.id','master_locations.city_id')
@@ -56,6 +56,19 @@
 					{
 						$disp->follow_status = false;
 					}
+					if(!empty($disp->store_images)){
+						$disp->store_images = unserialize($disp->store_images);
+						$storeImagesData = [];
+						if(!empty($disp->store_images)){
+							foreach($disp->store_images as $imageKey =>  $imageVal){
+								$imageUrl = asset('/uploads/store_images/'.$imageVal);
+								$storeImagesData[$imageKey]['name'] = $imageVal; 
+								$storeImagesData[$imageKey]['link'] = $imageUrl;
+							}
+						}
+						$disp->store_images = $storeImagesData;
+					}
+					$disp->store_meta_dropdown = DB::table('store_meta')->select('title','id')->get()->toArray();
 				}
 				
 		    	$result['data'] = $disp;
