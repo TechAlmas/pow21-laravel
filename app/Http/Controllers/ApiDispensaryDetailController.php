@@ -69,6 +69,9 @@
 						$disp->store_images = $storeImagesData;
 					}
 					$disp->store_meta_dropdown = DB::table('store_meta')->select('title','id')->get()->toArray();
+					if(!empty($disp->store_meta)){
+						$disp->store_meta = unserialize($disp->store_meta);
+					}
 				}
 				
 		    	$result['data'] = $disp;

@@ -19,24 +19,6 @@
 				//$file = $_FILES['file'];
 				$filename = $_FILES['file']['name'];
 				$postdata['logoUrl'] = $filename;
-				$this->postdata = $postdata;
-				
-		    	//if($_FILES['file']){
-		        	//$part = storage_path('app')."/uploads/dispensaries/";
-		        	//$filename = $_FILES['file']['name'];
-					//$tmp_name = $_FILES['file']['tmp_name'];
-		        	//$destinationfile = $part.$filename;
-					//$allowedExt = array("jpg","jpeg","png","pdf");
-		        	/*if(move_uploaded_file($tmp_name,$destinationfile)){
-		        		//$postdata['file'] = "uploads/dispensaries/".$filename;
-						$files = DB::table('master_locations')
-									   ->where('logoUrl',$postdata['logoUrl']);
-										
-		        	}*/
-		        //}
-		        //unset($postdata['file']);
-		        //unset($_FILES);
-				
 				$this->files = $_FILES;
 		        $this->postdata = $postdata;
 		        if($_FILES['store_images']){
@@ -113,6 +95,10 @@
 						$postdata['store_images'] = serialize($storeImages);
 					}
 					unset($postdata['removed_images']);
+				}
+
+				if(!empty($postdata['store_meta'])){
+					$postdata['store_meta'] = serialize($postdata['store_meta']);
 				}
 		        // unset($postdata['file']);
 		    }
