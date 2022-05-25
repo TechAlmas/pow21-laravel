@@ -72,6 +72,9 @@
 					if(!empty($disp->store_meta)){
 						$disp->store_meta = unserialize($disp->store_meta);
 					}
+					if(!empty($disp->assign_user)){
+						$disp->assign_user = unserialize($disp->assign_user);
+					}
 				}
 				
 		    	$result['data'] = $disp;

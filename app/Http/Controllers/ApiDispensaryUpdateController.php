@@ -100,6 +100,9 @@
 				if(!empty($postdata['store_meta'])){
 					$postdata['store_meta'] = serialize($postdata['store_meta']);
 				}
+				if(!empty($postdata['assign_user'])){
+					$postdata['assign_user'] = serialize($postdata['assign_user']);
+				}
 		        // unset($postdata['file']);
 		    }
 
@@ -124,7 +127,7 @@
 					$postdata['slug'] = str_slug($postdata['name']);
 		        	$new_claim_request = MasterLocation::create($postdata);
 					$result['data'] = $new_claim_request;
-					return $result;
+					
 		        }
 				else
 				{
@@ -132,8 +135,26 @@
 				                      ->where('id',$postdata['id'])
 									  ->first();
 					$result['data'] = $update_disp;
-					return $result;
 				}
+
+				if(!empty($result['data']->id && !empty($result['data']->assign_user))){
+					$assignUserData = unserialize($result['data']->assign_user);
+					$updateUserData = [];
+					if(!empty($assignUserData)){
+						foreach($assignUserData as $assignUserKey => $assignUserVal){
+							$updateUserData[$assignUserKey]['user_id'] = $assignUserVal;
+							$updateUserData[$assignUserKey]['dispansary_id'] = $result['data']->id;
+						}
+						if(!empty($updateUserData)){
+
+							DB::table('dispensaries_users')->insert($updateUserData);
+						}
+					}
+
+					
+				}
+
+				return $result;
 
 		    }
 
