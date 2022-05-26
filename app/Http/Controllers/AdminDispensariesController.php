@@ -2,7 +2,7 @@
 
 	use Session;
 	use Request;
-	use DB;
+	use DB,Route;
 	use CRUDBooster;
 
 	class AdminDispensariesController extends \crocodicstudio\crudbooster\controllers\CBController {
@@ -56,6 +56,7 @@
 			$this->form[] = ['label'=>'Email','name'=>'email','type'=>'email','validation'=>'email','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Email 2','name'=>'email2','type'=>'text','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Phone','name'=>'phone','type'=>'text','width'=>'col-sm-10'];
+			$this->form[] = ['label'=>'Store Meta','name'=>'store_meta','type'=>'select2-multi','datatable'=>'store_meta,title'];
 			// $this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','datatable'=>'claim_listings,status'];
 			// $this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','width'=>'col-sm-10'];
 			// $this->form[] = ['label'=>'Store Meta','name'=>'user','type'=>'child','validation'=>'string','width'=>'col-sm-9','table'=>'dispensaries_store_icons','foreign_key'=>'dispansary_id'];
@@ -322,6 +323,34 @@
 	    | @button_name = the name of button
 	    |
 	    */
+
+		public function getEdit($id)
+	    {
+	        $this->cbLoader();
+	        $row = DB::table($this->table)->where($this->primary_key, $id)->first();
+			if(!empty($row->store_meta)){
+				$row->store_meta = unserialize($row->store_meta);
+			}
+	        $claim_status = DB::table('claim_listings')->where('listing_id',$id)->first();
+	        if($claim_status){
+				$row->{'claim_status'} = $claim_status->status;
+	        }else{
+	        	$row->{'claim_status'} = 'No records found';
+	        }
+	        if (! CRUDBooster::isRead() && $this->global_privilege == false || $this->button_edit == false) {
+	            CRUDBooster::insertLog(trans("crudbooster.log_try_edit", [
+	                'name' => $row->{$this->title_field},
+	                'module' => CRUDBooster::getCurrentModule()->name,
+	            ]));
+	            CRUDBooster::redirect(CRUDBooster::adminPath(), trans('crudbooster.denied_access'));
+	        }
+	        $page_menu = Route::getCurrentRoute()->getActionName();
+	        $page_title = trans("crudbooster.edit_data_page_title", ['module' => CRUDBooster::getCurrentModule()->name, 'name' => $row->{$this->title_field}]);
+	        $command = 'edit';
+	        Session::put('current_row_id', $id);
+			// echo "<pre>"; print_r($command);die;
+	        return view('crudbooster::default.form', compact('id', 'row', 'page_menu', 'page_title', 'command'));
+	    }
 	    public function actionButtonSelected($id_selected,$button_name) {
 	        //Your code here
 
@@ -407,7 +436,8 @@
 	    | ---------------------------------------------------------------------- 
 	    |
 	    */    
-	    public function hook_row_index($column_index,&$column_value) {	        
+	    public function hook_row_index($column_index,&$column_value) {	 
+			      
 	    	//Your code here
 	    }
 
@@ -418,7 +448,10 @@
 	    | @arr
 	    |
 	    */
-	    public function hook_before_add(&$postdata) {        
+	    public function hook_before_add(&$postdata) {    
+			if(!empty($postdata['store_meta'])){
+				$postdata['store_meta'] = serialize($postdata['store_meta']);
+			}    
 	        //Your code here
 
 	    }
@@ -444,7 +477,9 @@
 	    | 
 	    */
 	    public function hook_before_edit(&$postdata,$id) {        
-	        //Your code here
+	        if(!empty($postdata['store_meta'])){
+				$postdata['store_meta'] = serialize($postdata['store_meta']);
+			} 
 
 	    }
 
