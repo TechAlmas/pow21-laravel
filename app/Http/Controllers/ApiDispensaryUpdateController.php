@@ -17,10 +17,28 @@
 		    public function hook_before(&$postdata) {
 		        //This method will be execute before run the main process
 				//$file = $_FILES['file'];
-				$filename = $_FILES['file']['name'];
-				$postdata['logoUrl'] = $filename;
 				$this->files = $_FILES;
 		        $this->postdata = $postdata;
+
+				if(!empty($_FILES['file'])){
+					$path = storage_path('app')."/uploads/store_images/";
+					$filename =  $postdata['id'].'-'.$_FILES['file']['name'][0];
+					$tmp_name = $_FILES['file']['tmp_name'][0];
+					$destinationfile = $path.$filename;
+					if(!File::isDirectory($path)){
+
+						File::makeDirectory($path, 0777, true, true);
+						
+					}
+					if(move_uploaded_file($tmp_name,$destinationfile)){
+						$postdata['logoUrl'] = "/uploads/store_images/".$filename;
+					}
+					unset($postdata['file']);
+				}else{
+					//Delete the logo url from Database if user not uploaded logo.
+					 DB::table($this->table)->where('id',!empty($postdata['id'] )? $postdata['id'] : 0 )->update(['logoUrl' => '']);
+				}
+
 		        if($_FILES['store_images']){
 					$uploaded_files = array();
 					if(!empty($postdata['id'])){
@@ -107,7 +125,7 @@
 				}else{
 					$postdata['assign_user'] = '';
 				}
-		        // unset($postdata['file']);
+		        
 		    }
 
 		    public function hook_query(&$query) {
@@ -142,7 +160,7 @@
 				}
 				
 				if(!empty($result['data']->id )){
-					DB::table('dispensaries_users')->where('dispansary_id',$result['data']->id )->delete();
+					// DB::table('dispensaries_users')->where('dispansary_id',$result['data']->id )->delete();
 					if(!empty($result['data']->assign_user)){
 
 						$assignUserData = unserialize($result['data']->assign_user);
