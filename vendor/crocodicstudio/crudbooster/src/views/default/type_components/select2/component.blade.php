@@ -134,6 +134,7 @@
                 $dataenum = (is_array($dataenum)) ? $dataenum : explode(";", $dataenum);
                 ?>
                 @foreach($dataenum as $enum)
+               
                     <?php
                     $val = $lab = '';
                     if (strpos($enum, '|') !== FALSE) {
