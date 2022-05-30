@@ -43,6 +43,7 @@
 			# START FORM DO NOT REMOVE THIS LINE
 			$this->form = [];
 			$this->form[] = ['label'=>'Status','name'=>'status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'1|Active;0|InActive'];
+			$this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','validation'=>'string','width'=>'col-sm-9','disabled'=>'true'];
 			$this->form[] = ['label'=>'Name','name'=>'name','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Address','name'=>'address','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Address 2','name'=>'address2','type'=>'text','width'=>'col-sm-10'];
