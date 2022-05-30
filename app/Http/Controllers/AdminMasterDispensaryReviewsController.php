@@ -35,7 +35,10 @@
 			$this->col[] = ["label"=>"Rating","name"=>"rating"];
 			$this->col[] = ["label"=>"Title","name"=>"title"];
 			$this->col[] = ["label"=>"Message","name"=>"message"];
-			$this->col[] = ["label"=>"Status","name"=>"status"];
+			$this->col[] = ["label"=>"Status","name"=>"status","callback" => function($row){
+				if($row->status==1){ return "Active";}else{ return "InActive";}
+			}];
+			
 			# END COLUMNS DO NOT REMOVE THIS LINE
 
 			# START FORM DO NOT REMOVE THIS LINE

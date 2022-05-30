@@ -28,7 +28,7 @@
 		    public function hook_after($postdata,&$result) {
 		        //This method will be execute after run the main process
 
-		        DB::table("master_users_reviews")->where('id',$postdata['id'])->update(['status'=>0]);
+		        DB::table("master_users_reviews")->where('id',$postdata['id'])->delete();
 		        $result['data'] = 1;
 
 		    }
