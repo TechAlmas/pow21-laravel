@@ -160,7 +160,7 @@
 				}
 				
 				if(!empty($result['data']->id )){
-					// DB::table('dispensaries_users')->where('dispansary_id',$result['data']->id )->delete();
+					DB::table('dispensaries_users')->where('dispansary_id',$result['data']->id )->delete();
 					if(!empty($result['data']->assign_user)){
 
 						$assignUserData = unserialize($result['data']->assign_user);

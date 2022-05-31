@@ -66,13 +66,29 @@
 								$storeImagesData[$imageKey]['link'] = $imageUrl;
 							}
 						}
+						if(!empty($disp->store_thumbnail_image)){
+							$thumbVal = '';
+							$thumbKey = '';
+							foreach($storeImagesData as $storeImgKey => $storeImgVal){
+								if($storeImgVal['name'] == $disp->store_thumbnail_image ){
+									$thumbVal = $storeImgVal;
+									$thumbKey = $storeImgKey;
+									break;
+								}
+							}
+							if(!empty($thumbKey) && !empty($thumbVal)){
+
+								unset($storeImagesData[$thumbKey]);
+								array_unshift($storeImagesData,$thumbVal);
+							}
+						}
 						$disp->store_images = $storeImagesData;
 					}
 					$disp->store_meta_dropdown = DB::table('store_meta')->select('title','id')->get()->toArray();
 					if(!empty($disp->store_meta)){
 						$disp->store_meta = unserialize($disp->store_meta);
 					}
-					$disp->assign_user_dropdown = DB::table('dispensaries_users')->leftJoin('cms_users','cms_users.id','dispensaries_users.user_id')->where('dispensaries_users.dispansary_id',$disp->id)->select('cms_users.name','cms_users.id')->get()->toArray();
+					$disp->assign_user_dropdown = DB::table('dispensaries_users')->leftJoin('cms_users','cms_users.id','dispensaries_users.user_id')->where('dispensaries_users.dispansary_id',$disp->id)->select('cms_users.name','cms_users.id')->groupBy('dispensaries_users.user_id')->get()->toArray();
 					if(!empty($disp->assign_user)){
 						$disp->assign_user = unserialize($disp->assign_user);
 					}
