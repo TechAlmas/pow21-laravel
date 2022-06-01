@@ -36,7 +36,15 @@
 					unset($postdata['file']);
 				}else{
 					//Delete the logo url from Database if user not uploaded logo.
-					 DB::table($this->table)->where('id',!empty($postdata['id'] )? $postdata['id'] : 0 )->update(['logoUrl' => '']);
+					$checkIfLogoImageExists = DB::table($this->table)->where('id',!empty($postdata['id'] )? $postdata['id'] : 0 )->value('logoUrl');
+					if(!empty($checkIfLogoImageExists)){
+						$path = storage_path('app')."/uploads/store_images/";
+						$filePath = $path.$checkIfLogoImageExists;
+						if(file_exists($filePath)){
+							unlink($filePath);
+						}
+						DB::table($this->table)->where('id',!empty($postdata['id'] )? $postdata['id'] : 0 )->update(['logoUrl' => '']);
+					}
 				}
 
 		        if($_FILES['store_images']){

@@ -92,6 +92,10 @@
 					if(!empty($disp->assign_user)){
 						$disp->assign_user = unserialize($disp->assign_user);
 					}
+
+					if(!empty($disp->logoUrl)){
+						$disp->logoUrl = asset($disp->logoUrl);
+					}
 				}
 				
 		    	$result['data'] = $disp;
