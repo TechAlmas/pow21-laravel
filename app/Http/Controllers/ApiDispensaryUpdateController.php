@@ -71,6 +71,19 @@
 								$uploaded_files[] = $filename;
 							}
 						}
+
+						if(!empty($postdata['removed_images'])){
+
+							foreach($postdata['removed_images'] as $imageVal){
+								if(in_array($imageVal,$uploaded_files)){
+									if (($key = array_search($imageVal, $uploaded_files)) !== false) {
+										unset($uploaded_files[$key]);
+										
+									}
+									
+								}
+							}
+						}
 		        		
 		        		$postdata['store_images'] = serialize($uploaded_files);
 		        	}
