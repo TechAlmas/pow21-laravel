@@ -36,7 +36,15 @@
 					unset($postdata['file']);
 				}else{
 					//Delete the logo url from Database if user not uploaded logo.
-					 DB::table($this->table)->where('id',!empty($postdata['id'] )? $postdata['id'] : 0 )->update(['logoUrl' => '']);
+					$checkIfLogoImageExists = DB::table($this->table)->where('id',!empty($postdata['id'] )? $postdata['id'] : 0 )->value('logoUrl');
+					if(!empty($checkIfLogoImageExists)){
+						$path = storage_path('app')."/uploads/store_images/";
+						$filePath = $path.$checkIfLogoImageExists;
+						if(file_exists($filePath)){
+							unlink($filePath);
+						}
+						DB::table($this->table)->where('id',!empty($postdata['id'] )? $postdata['id'] : 0 )->update(['logoUrl' => '']);
+					}
 				}
 
 		        if($_FILES['store_images']){
@@ -69,6 +77,19 @@
 							if(move_uploaded_file($tmp_name,$destinationfile)){
 								//$postdata['file'] = "uploads/dispensaries/".$filename;
 								$uploaded_files[] = $filename;
+							}
+						}
+
+						if(!empty($postdata['removed_images'])){
+
+							foreach($postdata['removed_images'] as $imageVal){
+								if(in_array($imageVal,$uploaded_files)){
+									if (($key = array_search($imageVal, $uploaded_files)) !== false) {
+										unset($uploaded_files[$key]);
+										
+									}
+									
+								}
 							}
 						}
 		        		
@@ -159,6 +180,17 @@
 					$result['data'] = $update_disp;
 				}
 				
+				if(!empty($result['data']->id )){
+					DB::table('dispensaries_users')->where('dispansary_id',$result['data']->id )->delete();
+					if(!empty($result['data']->assign_user)){
+
+						$assignUserData = unserialize($result['data']->assign_user);
+						$updateUserData = [];
+						if(!empty($assignUserData)){
+							foreach($assignUserData as $assignUserKey => $assignUserVal){
+								$updateUserData[$assignUserKey]['user_id'] = $assignUserVal;
+								$updateUserData[$assignUserKey]['dispansary_id'] = $result['data']->id;
+							}
 				// if(!empty($result['data']->id )){
 				// 	// DB::table('dispensaries_users')->where('dispansary_id',$result['data']->id )->delete();
 				// 	if(!empty($result['data']->assign_user)){
