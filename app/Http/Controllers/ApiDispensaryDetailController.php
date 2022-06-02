@@ -88,7 +88,10 @@
 					if(!empty($disp->store_meta)){
 						$disp->store_meta = unserialize($disp->store_meta);
 					}
+
 					$disp->assign_user_dropdown = DB::table('dispensaries_users')->leftJoin('cms_users','cms_users.id','dispensaries_users.user_id')->where('dispensaries_users.dispansary_id',$disp->id)->select('cms_users.name','cms_users.id')->groupBy('dispensaries_users.user_id')->get()->toArray();
+					//$disp->assign_user_dropdown = DB::table('dispensaries_users')->leftJoin('cms_users','cms_users.id','dispensaries_users.user_id')->where('dispensaries_users.dispansary_id',$disp->id)->select('cms_users.name','cms_users.id')->groupBy('cms_users.id')->get()->toArray();
+
 					if(!empty($disp->assign_user)){
 						$disp->assign_user = unserialize($disp->assign_user);
 					}
