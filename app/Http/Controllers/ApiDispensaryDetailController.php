@@ -100,6 +100,14 @@
 						$disp->logoUrl = asset($disp->logoUrl);
 					}
 				}
+				if(!empty($postdata['user_id']) && !empty($disp->id) ){
+					$checkDispensoryReview = DB::table('master_dispensary_reviews')->where('user_id',$postdata['user_id'])->where('disp_id',$disp->id)->first();
+					$result['is_user_reviewed'] = !empty($checkDispensoryReview) ? 1 : 0;
+				
+					
+				}else{
+					$result['is_user_reviewed'] = 0;
+				}
 				
 		    	$result['data'] = $disp;
 
