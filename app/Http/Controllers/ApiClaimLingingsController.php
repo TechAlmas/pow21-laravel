@@ -4,6 +4,7 @@
 		use Request;
 		use DB;
 		use CRUDBooster;
+		use GeoIp2\Database\Reader;
 
 		class ApiClaimLingingsController extends \crocodicstudio\crudbooster\controllers\ApiController {
 
@@ -11,6 +12,8 @@
 				$this->table       = "claim_listings";        
 				$this->permalink   = "claim_lingings";    
 				$this->method_type = "post";
+				$this->user_token =uniqid(); 
+				$this->reader = new Reader('/home/miopro/public_html/admin/vendor/geoip2/geoip2/maxmind-db/GeoIP2-City.mmdb');  
 		    }
 		
 
@@ -33,6 +36,46 @@
 		        	}
 		        }
 		        unset($postdata['file']);
+
+				// User signup along with claim submit
+				if(!empty($postdata['claim_listing_with_signup'])){
+					$password= Hash::make($postdata["password"]);
+					$postdata["remember_token"] = $this->user_token;
+					$postdata["referral_id"] = $this->user_token;
+
+					$clientIp = Request::getClientIp(true);
+
+					$record = $this->reader->city($clientIp);
+
+					//print_r($record);exit;
+
+				
+
+					$country = $record->country->name;
+					$state = $record->mostSpecificSubdivision->name;
+					$city = $record->city->name;
+					$latitude = $record->location->latitude;
+					$longitude = $record->location->longitude;
+					$ip = $record->traits->ipAddress;
+
+					$user_id = DB::table("cms_users")->insertGetId(array("name"=>$postdata["first_name"]+" "+$postdata["last_name"], "email"=>$postdata["email"],"id_cms_privileges"=>$postdata["id_cms_privileges"],"status"=>"Active","password"=>Hash::make($password),"remember_token"=>$postdata["remember_token"],"referral_id"=>$postdata["referral_id"],"country"=>$country,"state"=>$state,"city"=>$city,"ip"=>$ip,"latitude"=>$latitude,"longitude"=>$longitude));
+
+					$data = ['email'=>$postdata['email'],'password'=>$password];
+					if(isset($user_id) && !empty($user_id))
+					{
+						CRUDBooster::sendEmail(['to'=>$postdata['email'],'data'=>$data,'template'=>'register_mail']);	
+											
+				    }	
+
+					unset($postdata['password']);
+					unset($postdata['is_updates']);
+					unset($postdata['status']);
+					unset($postdata['id_cms_privileges']);
+					unset($postdata['referrer_id']);
+					unset($postdata['claim_listing_with_signup']);
+					unset($postdata['remember_token']);
+
+				}
 
 		    }
 			public function execute_api(){
@@ -80,6 +123,16 @@
 
 		    public function hook_after($postdata,&$result) {
 		        //This method will be execute after run the main process
+				if(!empty($result['id'])){
+					$getClaimData = DB::table($this->table)->where('id',$result['id'])->first();
+					if(!empty($getClaimData)){
+						$data = ['name'=>$getClaimData->first_name];
+					
+						CRUDBooster::sendEmail(['to'=>$getClaimData->email,'data'=>$data,'template'=>'claim_listing']);	
+					
+
+					}
+				}
 		    }
 
 		}

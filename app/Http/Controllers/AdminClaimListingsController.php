@@ -24,7 +24,7 @@
 			$this->button_bulk_action = true;
 			$this->button_action_style = "button_icon";
 			$this->button_add = false;
-			$this->button_edit = false;
+			$this->button_edit = true;
 			$this->button_delete = true;
 			$this->button_detail = true;
 			$this->button_show = true;
@@ -48,13 +48,13 @@
 
 			# START FORM DO NOT REMOVE THIS LINE
 			$this->form = [];
-			$this->form[] = ['label'=>'Id','name'=>'listing_id','type'=>'select2','validation'=>'required|integer|min:0','width'=>'col-sm-10','datatable'=>'claim_listings,id'];
-			$this->form[] = ['label'=>'First Name','name'=>'first_name','type'=>'text','validation'=>'required|min:1|max:255','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'Last Name','name'=>'last_name','type'=>'text','validation'=>'required|min:1|max:255','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'Telephone','name'=>'telephone','type'=>'text','validation'=>'required|min:1|max:255','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'E Mail','name'=>'e_mail','type'=>'text','validation'=>'required|min:1|max:255','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'Verification Details','name'=>'verification_details','type'=>'textarea','validation'=>'required|string|min:5|max:5000','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'Files','name'=>'files','type'=>'upload','width'=>'col-sm-10'];
+			// $this->form[] = ['label'=>'Id','name'=>'listing_id','type'=>'select2','validation'=>'integer|min:0','width'=>'col-sm-10','datatable'=>'claim_listings,id','readonly'=>true];
+			$this->form[] = ['label'=>'First Name','name'=>'first_name','type'=>'text','validation'=>'required|min:1|max:255','width'=>'col-sm-10','readonly'=>true];
+			$this->form[] = ['label'=>'Last Name','name'=>'last_name','type'=>'text','validation'=>'required|min:1|max:255','width'=>'col-sm-10','readonly'=>true];
+			$this->form[] = ['label'=>'Telephone','name'=>'telephone','type'=>'text','validation'=>'required|min:1|max:255','width'=>'col-sm-10','readonly'=>true];
+			$this->form[] = ['label'=>'E Mail','name'=>'e_mail','type'=>'text','validation'=>'required|min:1|max:255','width'=>'col-sm-10','readonly'=>true];
+			$this->form[] = ['label'=>'Verification Details','name'=>'verification_details','type'=>'textarea','validation'=>'required|string|min:5|max:5000','width'=>'col-sm-10','readonly'=>true];
+			$this->form[] = ['label'=>'Files','name'=>'files','type'=>'upload','width'=>'col-sm-10','readonly'=>true];
 			$this->form[] = ['label'=>'Status','name'=>'status','type'=>'select2','width'=>'col-sm-10','dataenum'=>'Verified|Verified;Unverified|Unverified;Pending|Pending'];
 			# END FORM DO NOT REMOVE THIS LINE
 
@@ -97,8 +97,8 @@
 	        | 
 	        */
 	        $this->addaction = array();
-			$this->addaction[] = ['url'=>CRUDBooster::mainpath('change-status/approve/[id]'),'icon'=>'fa fa-check','color'=>'success','confirmation'=>true];
-            $this->addaction[] = ['url'=>CRUDBooster::mainpath('change-status/reject/[id]'),'icon'=>'fa fa-close','color'=>'danger','confirmation'=>true];
+			// $this->addaction[] = ['url'=>CRUDBooster::mainpath('change-status/approve/[id]'),'icon'=>'fa fa-check','color'=>'success','confirmation'=>true];
+            // $this->addaction[] = ['url'=>CRUDBooster::mainpath('change-status/reject/[id]'),'icon'=>'fa fa-close','color'=>'danger','confirmation'=>true];
 	        
 
 
