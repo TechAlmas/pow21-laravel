@@ -159,26 +159,26 @@
 					$result['data'] = $update_disp;
 				}
 				
-				if(!empty($result['data']->id )){
-					// DB::table('dispensaries_users')->where('dispansary_id',$result['data']->id )->delete();
-					if(!empty($result['data']->assign_user)){
+				// if(!empty($result['data']->id )){
+				// 	// DB::table('dispensaries_users')->where('dispansary_id',$result['data']->id )->delete();
+				// 	if(!empty($result['data']->assign_user)){
 
-						$assignUserData = unserialize($result['data']->assign_user);
-						$updateUserData = [];
-						if(!empty($assignUserData)){
-							foreach($assignUserData as $assignUserKey => $assignUserVal){
-								$updateUserData[$assignUserKey]['user_id'] = $assignUserVal;
-								$updateUserData[$assignUserKey]['dispansary_id'] = $result['data']->id;
-							}
+				// 		$assignUserData = unserialize($result['data']->assign_user);
+				// 		$updateUserData = [];
+				// 		if(!empty($assignUserData)){
+				// 			foreach($assignUserData as $assignUserKey => $assignUserVal){
+				// 				$updateUserData[$assignUserKey]['user_id'] = $assignUserVal;
+				// 				$updateUserData[$assignUserKey]['dispansary_id'] = $result['data']->id;
+				// 			}
 							
-							if(!empty($updateUserData)){
-								DB::table('dispensaries_users')->insert($updateUserData);
-							}
-						}
-					}
+				// 			if(!empty($updateUserData)){
+				// 				DB::table('dispensaries_users')->insert($updateUserData);
+				// 			}
+				// 		}
+				// 	}
 
 					
-				}
+				// }
 
 				return $result;
 
