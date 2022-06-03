@@ -39,11 +39,12 @@
 			$this->col[] = ["label"=>"Country","name"=>"country"];
 			$this->col[] = ["label"=>"Email","name"=>"email"];
 			# END COLUMNS DO NOT REMOVE THIS LINE
-			
+
 			# START FORM DO NOT REMOVE THIS LINE
 			$this->form = [];
 			$this->form[] = ['label'=>'Status','name'=>'status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'1|Active;0|InActive'];
-			$this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','validation'=>'string','width'=>'col-sm-9','disabled'=>'true'];
+			$this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'Verified|Verified;Unverified|Unverified;Pending|Pending'];
+			$this->form[] = ['label'=>'Id','name'=>'id','type'=>'text','width'=>'col-sm-10','readonly'=>true];
 			$this->form[] = ['label'=>'Name','name'=>'name','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Address','name'=>'address','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Address 2','name'=>'address2','type'=>'text','width'=>'col-sm-10'];
@@ -57,15 +58,20 @@
 			$this->form[] = ['label'=>'Email','name'=>'email','type'=>'email','validation'=>'email','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Email 2','name'=>'email2','type'=>'text','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Phone','name'=>'phone','type'=>'text','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'Store Meta','name'=>'store_meta','type'=>'select2-multi','datatable'=>'store_meta,title'];
-			// $this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','datatable'=>'claim_listings,status'];
-			// $this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','width'=>'col-sm-10'];
-			// $this->form[] = ['label'=>'Store Meta','name'=>'user','type'=>'child','validation'=>'string','width'=>'col-sm-9','table'=>'dispensaries_store_icons','foreign_key'=>'dispansary_id'];
-			// $this->form[] = ['label'=>'Business Owners','name'=>'user','type'=>'child','width'=>'col-sm-9','table'=>'dispensaries_users','foreign_key'=>'dispansary_id'];
+			$this->form[] = ['label'=>'Store Meta','name'=>'store_meta','type'=>'select2-multi','width'=>'col-sm-10','datatable'=>'store_meta,title'];
+			$this->form[] = ['label'=>'Assign User','name'=>'assign_user','type'=>'select2-multi','width'=>'col-sm-10','datatable'=>'cms_users,name','datatable_where'=>'id_cms_privileges = 6 || id_cms_privileges = 7'];
+
+
+			$customHtml = "<a href=".CRUDBooster::mainpath('notify-bo/')." class='btn btn-primary notifyBo'>Notify Bo</a>";
+			$this->form[] = ['label'=>'Notify Bo','name'=>'notify_bo','type'=>'custom','width'=>'col-sm-9','html'=>$customHtml];
 			# END FORM DO NOT REMOVE THIS LINE
 
 			# OLD START FORM
 			//$this->form = [];
+			//$this->form[] = ['label'=>'Id','name'=>'listing_id','type'=>'select2','validation'=>'integer|min:0','width'=>'col-sm-10','datatable'=>'claim_listings,id','readonly'=>true];
+			//$this->form[] = ['label'=>'Status','name'=>'status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'1|Active;0|InActive'];
+			//$this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'Verified|Verified;Unverified|Unverified;Pending|Pending'];
+			//// $this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','validation'=>'string','width'=>'col-sm-9'];
 			//$this->form[] = ['label'=>'Name','name'=>'name','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
 			//$this->form[] = ['label'=>'Address','name'=>'address','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
 			//$this->form[] = ['label'=>'Address 2','name'=>'address2','type'=>'text','width'=>'col-sm-10'];
@@ -79,15 +85,11 @@
 			//$this->form[] = ['label'=>'Email','name'=>'email','type'=>'email','validation'=>'email','width'=>'col-sm-10'];
 			//$this->form[] = ['label'=>'Email 2','name'=>'email2','type'=>'text','width'=>'col-sm-10'];
 			//$this->form[] = ['label'=>'Phone','name'=>'phone','type'=>'text','width'=>'col-sm-10'];
-			//$this->form[] = ['label'=>'Status','name'=>'status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'1|Active;0|InActive'];
-			//$this->form[] = ['label'=>'Claim Status','name'=>'id','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'Verified|Verified;Unverified|Unverified;Pending|Pending','join'=>'claim_listings,listing_id','showInDetail'=>true];
-			//$icon_columns[] = ['label'=>'Text','name'=>'option_value','type'=>'text','required'=>false];
-			//$icon_columns[] = ['label'=>'Icon','name'=>'option_icon','type'=>'datamodal','width'=>'col-sm-9','datamodal_table'=>'master_icons','datamodal_columns'=>'name','datamodal_size'=>'large','datamodal_columns_alias_name'=>'"Name"'];
-			////$this->form[] = ['label'=>'Store Meta','name'=>'icon','type'=>'child','validation'=>'required|string','width'=>'col-sm-9','columns'=>$icon_columns,'table'=>'test','foreign_key'=>'dispansary_id'];
-			//$this->form[] = ['label'=>'Store Meta','name'=>'user','type'=>'child','validation'=>'string','width'=>'col-sm-9','columns'=>$icon_columns,'table'=>'dispensaries_store_icons','foreign_key'=>'dispansary_id'];
-			//
-			//$user_columns[] = ['label'=>'Assign Business','name'=>'user_id','type'=>'datamodal','width'=>'col-sm-9','datamodal_table'=>'cms_users','datamodal_columns'=>'name','datamodal_size'=>'large','datamodal_columns_alias_name'=>'"Name"'];
-			//$this->form[] = ['label'=>'Business Owners','name'=>'user','type'=>'child','width'=>'col-sm-9','columns'=>$user_columns,'table'=>'dispensaries_users','foreign_key'=>'dispansary_id'];
+			//$this->form[] = ['label'=>'Store Meta','name'=>'store_meta','type'=>'select2-multi','datatable'=>'store_meta,title'];
+			//// $this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','datatable'=>'claim_listings,status'];
+			//// $this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'text','width'=>'col-sm-10'];
+			//// $this->form[] = ['label'=>'Store Meta','name'=>'user','type'=>'child','validation'=>'string','width'=>'col-sm-9','table'=>'dispensaries_store_icons','foreign_key'=>'dispansary_id'];
+			//// $this->form[] = ['label'=>'Business Owners','name'=>'user','type'=>'child','width'=>'col-sm-9','table'=>'dispensaries_users','foreign_key'=>'dispansary_id'];
 			# OLD END FORM
 
 			/* 
@@ -105,6 +107,7 @@
 	        $this->sub_module = array();
 
 
+		
 	        /* 
 	        | ---------------------------------------------------------------------- 
 	        | Add More Action Button / Menu
@@ -133,7 +136,14 @@
 	        $this->button_selected[] = ['label'=>'Merge Dispensaries','icon'=>'fa fa-plus','name'=>'merge_dispensaries'];
 	        //$this->button_selected[] = ['label'=>'Assign To Group','icon'=>'fa fa-plus','name'=>'group_dispensaries'];
 
-	                
+			// $this->appendEditForm(function($row) {
+			// 	return "
+			// 		<div class='form-group'>
+			// 			<label for=''>Notify Bo</label>
+			// 			<a href=".CRUDBooster::mainpath('notify-bo/[id]')." class='btn btn-primary'><i class='fa fa-bell'></>
+			// 		</div>
+			// 		";
+			// });       
 	        /* 
 	        | ---------------------------------------------------------------------- 
 	        | Add alert message to this module at overheader
@@ -155,7 +165,7 @@
 	        | 
 	        */
 	        $this->index_button = array();
-
+			// $this->index_button[] = ["label"=>"Notify BO","icon"=>"fa fa-bell","url"=>CRUDBooster::mainpath('notify-bo/'.$row->id)];
 
 
 	        /* 
@@ -193,6 +203,12 @@
 
 	        $this->script_js = "
 	        		$(document).ready(function () {
+						if($(document).find('.notifyBo') != undefined){
+							var targetUrl = $(document).find('.notifyBo').attr('href');
+							var id = $('input[name=id]').val();
+							targetUrl = targetUrl+id;
+							$(document).find('.notifyBo').attr('href',targetUrl)
+						}
 	        			console.log($('#iframe-modal-storemetaoption_icon table tbody tr td').text());
 	        			$('.selected-action ul li a').click(function (event) {
 							
@@ -332,6 +348,9 @@
 			if(!empty($row->store_meta)){
 				$row->store_meta = unserialize($row->store_meta);
 			}
+			if(!empty($row->assign_user)){
+				$row->assign_user = unserialize($row->assign_user);
+			}
 	        $claim_status = DB::table('claim_listings')->where('listing_id',$id)->first();
 	        if($claim_status){
 				$row->{'claim_status'} = $claim_status->status;
@@ -453,6 +472,9 @@
 			if(!empty($postdata['store_meta'])){
 				$postdata['store_meta'] = serialize($postdata['store_meta']);
 			}    
+			if(!empty($postdata['assign_user'])){
+				$postdata['assign_user'] = serialize($postdata['assign_user']);
+			}    
 	        //Your code here
 
 	    }
@@ -481,6 +503,19 @@
 	        if(!empty($postdata['store_meta'])){
 				$postdata['store_meta'] = serialize($postdata['store_meta']);
 			} 
+			if(!empty($postdata['assign_user'])){
+				$postdata['assign_user'] = serialize($postdata['assign_user']);
+			} 
+			if(!empty($postdata['claim_status'])){
+				$checkIfClaimRequestExists = DB::table('claim_listings')->where('listing_id',$id)->first();
+				if(!empty($checkIfClaimRequestExists)){
+					DB::table('claim_listings')->where('listing_id',$id)->update(['status'=>$postdata['claim_status']]);
+				}
+				unset($postdata['claim_status']);
+			}
+			unset($postdata['notify_bo']);
+		
+			
 
 	    }
 
@@ -519,6 +554,29 @@
 	        //Your code here
 
 	    }
+		public function notifyBo($dataId){
+			$getDispData = DB::table('master_locations')->where('id',$dataId)->first();
+			if(!empty($getDispData->assign_user)){
+				$assignUsers = unserialize($getDispData->assign_user);	
+				if(is_array($assignUsers) ){
+
+					foreach($assignUsers as $assignUserVal){
+						$checkIfUserIsBusinessOwner = DB::table('cms_users')->where('id',$assignUserVal)->where('id_cms_privileges',6)->first();
+						if(!empty($checkIfUserIsBusinessOwner)){
+							$data = ['name'=>$checkIfUserIsBusinessOwner->name];
+					
+							CRUDBooster::sendEmail(['to'=>$checkIfUserIsBusinessOwner->email,'data'=>$data,'template'=>'store_profile_claimed']);	
+						}
+					}
+
+
+				
+				}
+			}
+
+			CRUDBooster::redirect(CRUDBooster::mainpath(), trans("Business Owners Notified Successfully"), 'success');
+		
+		}
 
 
 
