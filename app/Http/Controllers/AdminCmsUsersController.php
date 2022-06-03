@@ -26,7 +26,8 @@ class AdminCmsUsersController extends \crocodicstudio\crudbooster\controllers\CB
 		$this->col[] = array("label"=>"Name","name"=>"name");
 		$this->col[] = array("label"=>"Email","name"=>"email");
 		$this->col[] = array("label"=>"Privilege","name"=>"id_cms_privileges","join"=>"cms_privileges,name");
-		$this->col[] = array("label"=>"Photo","name"=>"photo","image"=>1);		
+		$this->col[] = array("label"=>"Photo","name"=>"photo","image"=>1);
+		$this->col[] = ["label"=>"Registration date","name"=>"created_at"];		
 		# END COLUMNS DO NOT REMOVE THIS LINE
 
 		# START FORM DO NOT REMOVE THIS LINE
@@ -51,6 +52,7 @@ class AdminCmsUsersController extends \crocodicstudio\crudbooster\controllers\CB
 				
 		$this->form[] = array("label"=>"Photo","name"=>"photo","type"=>"upload");	
 		if (CRUDBooster::getCurrentMethod() == 'getDetail') { $this->form[] = ['label'=>'Registration date','name'=>'created_at','type'=>'date'];  }
+		// if (CRUDBooster::getCurrentMethod() == 'getDetail') { $this->form[] = ['label'=>'Registration date','name'=>'created_at','type'=>'text'];  }
 		
 
 		if(CRUDBooster::myPrivilegeId() == 1){
@@ -69,6 +71,8 @@ class AdminCmsUsersController extends \crocodicstudio\crudbooster\controllers\CB
 
 								
 		$this->form[] = array("label"=>"Password","name"=>"password","type"=>"password","help"=>"Please leave empty if not change");
+		$this->form[] = ['label'=>'Created At','name'=>'created_at','type'=>'text','validation'=>'string','width'=>'col-sm-9','disabled'=>'true'];
+		$this->form[] = ['label'=>'Updated At','name'=>'updated_at','type'=>'text','validation'=>'string','width'=>'col-sm-9','disabled'=>'true'];
 		# END FORM DO NOT REMOVE THIS LINE
 
 		$this->addaction = array();
@@ -116,8 +120,8 @@ class AdminCmsUsersController extends \crocodicstudio\crudbooster\controllers\CB
 
         $this->cbLoader();
         $row = DB::table($this->table)->where($this->primary_key, $id)->first();
-
-       // $row->created_at = $row->created_at;
+		// $row->created_at = date('Y-m-d h:i:s',strtotime($row->created_at));
+    //    $row->created_at = $row->created_at;
 
         /*$row->fav_strain = $this->form[] = array("label"=>"Password","name"=>"fav_strain","type"=>"link");*/
 
