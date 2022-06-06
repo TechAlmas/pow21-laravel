@@ -69,4 +69,7 @@ Route::get('scrape-bcc', ['as' => 'scrape.bcc', 'uses' => 'ScrapeBccController@i
 	//Claim Listing related routes
 	Route::get('claim_listings/change-status/{status}/{dataId}', ['as' => 'ClaimListing.changeStatus', 'uses' => 'AdminClaimListingsController@changeStatus']);
 
+	//Notify BO ROute
+	Route::get('dispensaries/notify-bo/{dataId}', ['as' => 'Dispensary.notifyBo', 'uses' => 'AdminDispensariesController@notifyBo']);
+
 });

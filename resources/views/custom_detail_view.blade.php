@@ -65,7 +65,7 @@
 								<td><b>Status</b></td>
 								<td>{{ $row->status}}</td>
 							</tr>
-							<tr>
+							<!-- <tr>
 							@if(!empty($row->status) && $row->status == 'Pending')
 								<td><b>Action</b></td>
 								<td>
@@ -98,7 +98,7 @@
 								</td>
 								
 							@endif
-							</tr>
+							</tr> -->
 						</tbody>
 					</table>
 				</div>
