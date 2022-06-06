@@ -4,6 +4,10 @@
 		use Request;
 		use DB;
 		use CRUDBooster;
+
+		use Illuminate\Support\Facades\Hash;
+
+
 		use GeoIp2\Database\Reader;
 
 		class ApiClaimLingingsController extends \crocodicstudio\crudbooster\controllers\ApiController {
@@ -41,7 +45,9 @@
 				if(!empty($postdata['claim_listing_with_signup'])){
 					$password= Hash::make($postdata["password"]);
 					$postdata["remember_token"] = $this->user_token;
-					$postdata["referral_id"] = $this->user_token;
+
+					$postdata["referrer_id"] = $this->user_token;
+
 
 					$clientIp = Request::getClientIp(true);
 
@@ -58,12 +64,15 @@
 					$longitude = $record->location->longitude;
 					$ip = $record->traits->ipAddress;
 
-					$user_id = DB::table("cms_users")->insertGetId(array("name"=>$postdata["first_name"]+" "+$postdata["last_name"], "email"=>$postdata["email"],"id_cms_privileges"=>$postdata["id_cms_privileges"],"status"=>"Active","password"=>Hash::make($password),"remember_token"=>$postdata["remember_token"],"referral_id"=>$postdata["referral_id"],"country"=>$country,"state"=>$state,"city"=>$city,"ip"=>$ip,"latitude"=>$latitude,"longitude"=>$longitude));
 
-					$data = ['email'=>$postdata['email'],'password'=>$password];
+
+				$user_id = DB::table("cms_users")->insertGetId(array("name"=>$postdata["first_name"]." ".$postdata["last_name"], "email"=>$postdata["e_mail"],"id_cms_privileges"=>$postdata["id_cms_privileges"],"status"=>"Active","password"=>Hash::make($password),"remember_token"=>$postdata["remember_token"],"referral_id"=>$postdata["referrer_id"],"country"=>$country,"state"=>$state,"city"=>$city,"ip"=>$ip,"latitude"=>$latitude,"longitude"=>$longitude ));
+
+					$data = ['email'=>$postdata['e_mail'],'password'=>$password];
 					if(isset($user_id) && !empty($user_id))
 					{
-						CRUDBooster::sendEmail(['to'=>$postdata['email'],'data'=>$data,'template'=>'register_mail']);	
+						CRUDBooster::sendEmail(['to'=>$postdata['e_mail'],'data'=>$data,'template'=>'register_mail']);	
+
 											
 				    }	
 
@@ -72,7 +81,9 @@
 					unset($postdata['status']);
 					unset($postdata['id_cms_privileges']);
 					unset($postdata['referrer_id']);
-					unset($postdata['claim_listing_with_signup']);
+
+					// unset($postdata['claim_listing_with_signup']);
+
 					unset($postdata['remember_token']);
 
 				}
@@ -127,8 +138,14 @@
 					$getClaimData = DB::table($this->table)->where('id',$result['id'])->first();
 					if(!empty($getClaimData)){
 						$data = ['name'=>$getClaimData->first_name];
-					
-						CRUDBooster::sendEmail(['to'=>$getClaimData->email,'data'=>$data,'template'=>'claim_listing']);	
+
+						if(!empty($postdata['claim_listing_with_signup'])){
+							CRUDBooster::sendEmail(['to'=>$getClaimData->e_mail,'data'=>$data,'template'=>'claim_listing']);	
+						}else{
+
+							CRUDBooster::sendEmail(['to'=>$getClaimData->e_mail,'data'=>$data,'template'=>'claim_listing_signup']);	
+						}
+
 					
 
 					}
