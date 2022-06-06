@@ -20,8 +20,8 @@ use GeoIp2\Database\Reader;
 
 		    public function hook_before(&$postdata) {
 		        //This method will be execute before run the main process
-				// $postdata["remember_token"] = $this->user_token;
-		    	// $postdata["referral_id"] = $this->user_token;
+				$postdata["remember_token"] = $this->user_token;
+		    	$postdata["referral_id"] = $this->user_token;
 				
 				$clientIp = Request::getClientIp(true);
 
