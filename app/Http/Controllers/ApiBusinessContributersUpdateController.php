@@ -45,6 +45,12 @@ use GeoIp2\Database\Reader;
 				if(!empty($postdata['type'])){
 					$this->type = $postdata['type'];
 				}
+				if(!empty($postdata['password'])){
+
+					$postdata['password'] = Hash::make($postdata['password']);
+				}else{
+					unset($postdata['password'] );
+				}
 
 				unset($postdata['first_name']);
 				unset($postdata['last_name']);
@@ -77,9 +83,9 @@ use GeoIp2\Database\Reader;
 				}
 
 				if(!empty($result['data']->id)){
-					$password = mt_rand(111111,999999);
-					$password = Hash::make($password);
-					DB::table("cms_users")->where("id",$result['data']->id)->update(['password' => $password]);
+					// $password = mt_rand(111111,999999);
+					// $password = Hash::make($password);
+					// DB::table("cms_users")->where("id",$result['data']->id)->update(['password' => $password]);
 					
 						//removing the assigned user and reassigning it again.
 						$getDispData = DB::table('master_locations')->get()->toArray();
