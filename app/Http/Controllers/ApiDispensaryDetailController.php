@@ -11,11 +11,16 @@
 				$this->table       = "master_locations";        
 				$this->permalink   = "dispensary_detail";    
 				$this->method_type = "get";    
+				$this->user_id     = 0;
 		    }
 		
 
 		    public function hook_before(&$postdata) {
 		        //This method will be execute before run the main process
+				if(!empty($postdata['user_id'])){
+					$this->user_id = $postdata['user_id'];
+				}
+				unset($postdata['user_id']);
 
 		    }
 
@@ -89,7 +94,8 @@
 						$disp->store_meta = unserialize($disp->store_meta);
 					}
 
-					$disp->assign_user_dropdown = DB::table('dispensaries_users')->leftJoin('cms_users','cms_users.id','dispensaries_users.user_id')->where('dispensaries_users.dispansary_id',$disp->id)->select('cms_users.name','cms_users.id')->groupBy('dispensaries_users.user_id')->get()->toArray();
+					$disp->assign_user_dropdown = DB::table('cms_users')->where('cms_users.parent_id',$this->user_id)->select('cms_users.name','cms_users.id')->get()->toArray();
+					// $disp->assign_user_dropdown = DB::table('dispensaries_users')->leftJoin('cms_users','cms_users.id','dispensaries_users.user_id')->where('dispensaries_users.dispansary_id',$disp->id)->select('cms_users.name','cms_users.id')->groupBy('dispensaries_users.user_id')->get()->toArray();
 					//$disp->assign_user_dropdown = DB::table('dispensaries_users')->leftJoin('cms_users','cms_users.id','dispensaries_users.user_id')->where('dispensaries_users.dispansary_id',$disp->id)->select('cms_users.name','cms_users.id')->groupBy('cms_users.id')->get()->toArray();
 
 					if(!empty($disp->assign_user)){

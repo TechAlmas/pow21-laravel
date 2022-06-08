@@ -26,6 +26,10 @@ class MasterLocation extends Model
         'schedule',
         'license_type',
         'slug',
+        'store_meta',
+        'assign_user',
+        'store_images',
+        'store_thumbnail_image'
     ];
 
     protected $table = 'master_locations';
