@@ -6,7 +6,7 @@ use Request;
 use DB;
 use CRUDBooster;
 use App\User;
-use GeoIp2\Database\Reader;
+// use GeoIp2\Database\Reader;
 
 		class ApiBusinessContributersUpdateController extends \crocodicstudio\crudbooster\controllers\ApiController {
 
@@ -16,7 +16,7 @@ use GeoIp2\Database\Reader;
 				$this->method_type = "post";  
 				$this->retail_store = [];  
 				$this->user_token =uniqid(); 
-				$this->reader = new Reader('/home/miopro/public_html/admin/vendor/geoip2/geoip2/maxmind-db/GeoIP2-City.mmdb'); 
+				// $this->reader = new Reader('/home/miopro/public_html/admin/vendor/geoip2/geoip2/maxmind-db/GeoIP2-City.mmdb'); 
 		    }
 		
 
@@ -33,15 +33,15 @@ use GeoIp2\Database\Reader;
 
 				$postdata["referrer_id"] = $this->user_token;
 
-				$clientIp = Request::getClientIp(true);
+				// $clientIp = Request::getClientIp(true);
 
-				$record = $this->reader->city($clientIp);
-				$postdata['country'] = $record->country->name;
-				$postdata['state'] = $record->mostSpecificSubdivision->name;
-				$postdata['city'] = $record->city->name;
-				$postdata['latitude'] = $record->location->latitude;
-				$postdata['longitude'] = $record->location->longitude;
-				$postdata['ip'] = $record->traits->ipAddress;
+				// $record = $this->reader->city($clientIp);
+				// $postdata['country'] = $record->country->name;
+				// $postdata['state'] = $record->mostSpecificSubdivision->name;
+				// $postdata['city'] = $record->city->name;
+				// $postdata['latitude'] = $record->location->latitude;
+				// $postdata['longitude'] = $record->location->longitude;
+				// $postdata['ip'] = $record->traits->ipAddress;
 				if(!empty($postdata['type'])){
 					$this->type = $postdata['type'];
 				}
@@ -93,11 +93,14 @@ use GeoIp2\Database\Reader;
 						if(!empty($getDispData)){
 							foreach($getDispData as $dispVal){
 								$assign_user = !empty($dispVal['assign_user']) ? unserialize($dispVal['assign_user']) : [];
-								if($key = array_search($result['data']->id, $assign_user) ){
+								if(is_array($assign_user)){
 
-									unset($assign_user[$key]);
+									if($key = array_search($result['data']->id, $assign_user) ){
+	
+										unset($assign_user[$key]);
+									}
+									DB::table("master_locations")->where("id",$dispVal['id'])->update(['assign_user' => serialize($assign_user)]);
 								}
-								DB::table("master_locations")->where("id",$dispVal['id'])->update(['assign_user' => serialize($assign_user)]);
 
 							}
 						}

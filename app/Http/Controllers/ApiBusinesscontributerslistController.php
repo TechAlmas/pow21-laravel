@@ -48,9 +48,13 @@
 
 								foreach ($disp as $value) {
 									if(!empty($value['assign_user'])){
-										if(in_array($uVal->id,unserialize($value['assign_user']))){
-											$dispArray[$dispCount] = $value['name'];
-											
+										$assignUserArr = unserialize($value['assign_user']);
+										if(is_array($assignUserArr)){
+
+											if(in_array($uVal->id,$assignUserArr)){
+												$dispArray[$dispCount] = $value['name'];
+												
+											}
 										}
 									
 									}
@@ -79,15 +83,19 @@
 
 						foreach ($disp as $value) {
 							if(!empty($value['assign_user'])){
-								if(in_array($postdata['user_id'],unserialize($value['assign_user']))){
-									$dispArray[$dispCount]['name'] = $value['name'];
-									$dispArray[$dispCount]['id'] = $value['id'];
-									
-								}
-								if(!empty($getUserData)){
+								$assignUserArr = unserialize($value['assign_user']);
+								if(is_array($assignUserArr)){
 
-									if(in_array($getUserData->id,unserialize($value['assign_user']))){
-										$selectedStores[$dispCount] =  $value['id'];
+									if(in_array($postdata['user_id'],$assignUserArr)){
+										$dispArray[$dispCount]['name'] = $value['name'];
+										$dispArray[$dispCount]['id'] = $value['id'];
+										
+									}
+									if(!empty($getUserData)){
+	
+										if(in_array($getUserData->id,$assignUserArr)){
+											$selectedStores[$dispCount] =  $value['id'];
+										}
 									}
 								}
 
