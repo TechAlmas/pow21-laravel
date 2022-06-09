@@ -29,22 +29,44 @@
 		        //$result['data'] =$postdata['user_id'];
 		        $first = 
 		        $disp = DB::table('master_locations')
-		                ->join('dispensaries_users','master_locations.id','dispensaries_users.dispansary_id')
-						->where('dispensaries_users.user_id',$postdata['user_id'])
-						->get();
+		                // ->leftJoin('dispensaries_users','master_locations.id','dispensaries_users.dispansary_id')
+						// ->where('dispensaries_users.user_id',$postdata['user_id'])
+						->get()->toArray();
+				$disp = json_decode(json_encode($disp), true);
+			
 				//$total = (array)$disp;
-				foreach ($disp as $key => $value) {
-					$contributors = DB::table('dispensaries_users')
-									->join('cms_users','dispensaries_users.user_id','cms_users.id')
-									->where('dispensaries_users.dispansary_id',$value->dispansary_id)
-									->get();
-					$disp[$key]->{"contributors"} = $contributors;
-					$follow_count = DB::table('master_dispensary_followers')
-									->where('master_dispensary_followers.dispansary_id',$value->dispansary_id)
-									->count();
-					$disp[$key]->{"follow_count"} = $follow_count;
+				$dispArray = [];
+				$dispCount = 0;
+				if(!empty($disp)){
+
+					foreach ($disp as $value) {
+						if(!empty($value['assign_user'])){
+							if(in_array($postdata['user_id'],unserialize($value['assign_user']))){
+								$dispArray[$dispCount] = $value;
+								$assignedUsers =unserialize($value['assign_user']);
+								$assignedUsersNames = [];
+								if(!empty($assignedUsers)){
+									foreach($assignedUsers as $aKey => $aVal){
+										$assignedUsersNames[$aKey] = DB::table('cms_users')->where('id',$aVal)->value('name');
+									}
+								}
+								$dispArray[$dispCount]['contributors'] = $assignedUsersNames;
+								$follow_count = DB::table('master_dispensary_followers')
+								->where('master_dispensary_followers.dispansary_id',$value['id'])
+								->count();
+								$dispArray[$dispCount]['follow_count'] = $follow_count;
+							}
+	
+						}
+						
+						$dispCount++;
+						// $disp[$key]->{"contributors"} = $assignedUsersNames;
+					
+						// $disp[$key]->{"follow_count"} = $follow_count;
+					}
 				}
-		        $result['data'] = $disp;
+		        $result['data'] = $dispArray;
+				
 				
 		    }
 

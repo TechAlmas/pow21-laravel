@@ -63,7 +63,7 @@
 
 
 			$customHtml = "<a href=".CRUDBooster::mainpath('notify-bo/')." class='btn btn-primary notifyBo'>Notify Bo</a>";
-			$this->form[] = ['label'=>'Notify Bo','name'=>'notify_bo','type'=>'custom','width'=>'col-sm-9','html'=>$customHtml];
+			$this->form[] = ['label'=>'','name'=>'notify_bo','type'=>'custom','width'=>'col-sm-9','html'=>$customHtml];
 			# END FORM DO NOT REMOVE THIS LINE
 
 			# OLD START FORM

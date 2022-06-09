@@ -17,6 +17,7 @@
 				$this->permalink   = "claim_lingings";    
 				$this->method_type = "post";
 				$this->user_token =uniqid(); 
+				$this->claim_listing_with_signup = false;
 				$this->reader = new Reader('/home/miopro/public_html/admin/vendor/geoip2/geoip2/maxmind-db/GeoIP2-City.mmdb');  
 		    }
 		
@@ -76,13 +77,15 @@
 											
 				    }	
 
+					$this->claim_listing_with_signup = true;
+
 					unset($postdata['password']);
 					unset($postdata['is_updates']);
 					unset($postdata['status']);
 					unset($postdata['id_cms_privileges']);
 					unset($postdata['referrer_id']);
 
-					// unset($postdata['claim_listing_with_signup']);
+					unset($postdata['claim_listing_with_signup']);
 
 					unset($postdata['remember_token']);
 
@@ -139,11 +142,17 @@
 					if(!empty($getClaimData)){
 						$data = ['name'=>$getClaimData->first_name];
 
-						if(!empty($postdata['claim_listing_with_signup'])){
+						if($this->claim_listing_with_signup ){
 							CRUDBooster::sendEmail(['to'=>$getClaimData->e_mail,'data'=>$data,'template'=>'claim_listing']);	
 						}else{
 
 							CRUDBooster::sendEmail(['to'=>$getClaimData->e_mail,'data'=>$data,'template'=>'claim_listing_signup']);	
+						}
+						$getAdminEmail = DB::table('cms_users')->where('id_cms_privileges',1)->value('email');
+						if(!empty($getAdminEmail)){
+
+							//Send Email to Admin
+							CRUDBooster::sendEmail(['to'=>$getAdminEmail,'data'=>$data,'template'=>'claim_listing_notify_admin']);
 						}
 
 					
