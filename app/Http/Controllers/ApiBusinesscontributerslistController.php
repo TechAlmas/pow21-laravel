@@ -48,9 +48,13 @@
 
 								foreach ($disp as $value) {
 									if(!empty($value['assign_user'])){
-										if(in_array($uVal->id,unserialize($value['assign_user']))){
-											$dispArray[$dispCount] = $value['name'];
-											
+										$assignUserArray = unserialize($value['assign_user']);
+										if(is_array($assignUserArray)){
+
+											if(in_array($uVal->id,$assignUserArray)){
+												$dispArray[$dispCount] = $value['name'];
+												
+											}
 										}
 									
 									}
@@ -68,7 +72,7 @@
 				$result['data'] = $getUserData;
 
 				if(!empty($postdata['type'] && $postdata['type'] == 'add_edit' )){
-					$disp = DB::table('master_locations')->get()->toArray();
+					$disp = DB::table('master_locations')->where('status',0)->orWhere('status',3)->get()->toArray();
 					$disp = json_decode(json_encode($disp), true);
 				
 					//$total = (array)$disp;
@@ -79,15 +83,19 @@
 
 						foreach ($disp as $value) {
 							if(!empty($value['assign_user'])){
-								if(in_array($postdata['user_id'],unserialize($value['assign_user']))){
-									$dispArray[$dispCount]['name'] = $value['name'];
-									$dispArray[$dispCount]['id'] = $value['id'];
-									
-								}
-								if(!empty($getUserData)){
+								$assignUserArray = unserialize($value['assign_user']);
+								if(is_array($assignUserArray)){
 
-									if(in_array($getUserData->id,unserialize($value['assign_user']))){
-										$selectedStores[$dispCount] =  $value['id'];
+									if(in_array($postdata['user_id'],$assignUserArray)){
+										$dispArray[$dispCount]['name'] = $value['name'];
+										$dispArray[$dispCount]['id'] = $value['id'];
+										
+									}
+									if(!empty($getUserData)){
+	
+										if(in_array($getUserData->id,$assignUserArray)){
+											$selectedStores[$dispCount] =  $value['id'];
+										}
 									}
 								}
 

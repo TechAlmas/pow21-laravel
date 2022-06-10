@@ -146,9 +146,44 @@
 				}else{
 					$postdata['assign_user'] = '';
 				}
+
+				
 		        
 		    }
+			public function execute_api() {
+				$posts = Request::all();
+				if(empty($posts['type'])){
+					return Parent::execute_api();
+				}else{
+					$result = [];
+					$result['api_status'] = 0;
+					$result['api_message'] = 'error';
+					$result['api_http'] = 200;
+					$result['data'] = [];
+					$debug_mode_message = 'You are in debug mode !';
+					if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+						$result['api_authorization'] = $debug_mode_message;
 
+					}
+					if(!empty($posts['type']) && $posts['type'] == 'delete' && !empty($posts['id'])){
+						DB::table('master_locations')->where('id',$posts['id'])->delete();
+						$result['api_message'] = 'success';
+						$result['api_status'] = 1;
+					}else if(!empty($posts['type']) && $posts['type'] == 'suspend' && !empty($posts['id'])){
+						//Updating Current Status
+						DB::table('master_locations')->where('id',$posts['id'])->update(['status' =>3 ]);
+						$result['api_message'] = 'success';
+						$result['api_status'] = 1;
+					}else if(!empty($posts['type']) && $posts['type'] == 'resume' && !empty($posts['id'])){
+
+						DB::table('master_locations')->where('id',$posts['id'])->update(['status' =>1 ]);
+
+						$result['api_message'] = 'success';
+						$result['api_status'] = 1;
+					}
+					return $result;
+				}
+			}
 		    public function hook_query(&$query) {
 		        //This method is to customize the sql query
 
@@ -174,6 +209,7 @@
 		        }
 				else
 				{
+					
 					$update_disp = DB::table('master_locations')
 				                      ->where('id',$postdata['id'])
 									  ->first();

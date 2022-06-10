@@ -36,9 +36,9 @@ use GeoIp2\Database\Reader;
 				$clientIp = Request::getClientIp(true);
 
 				$record = $this->reader->city($clientIp);
-				$postdata['country'] = $record->country->name;
-				$postdata['state'] = $record->mostSpecificSubdivision->name;
-				$postdata['city'] = $record->city->name;
+				// $postdata['country'] = $record->country->name;
+				// $postdata['state'] = $record->mostSpecificSubdivision->name;
+				// $postdata['city'] = $record->city->name;
 				$postdata['latitude'] = $record->location->latitude;
 				$postdata['longitude'] = $record->location->longitude;
 				$postdata['ip'] = $record->traits->ipAddress;
@@ -78,6 +78,12 @@ use GeoIp2\Database\Reader;
 					$result['data'] = $updatedData;
 				}else{
 					$insertData = User::create($postdata);
+					if(!empty($insertData->id)){
+						$loginUrl = 'https://www.pow21.com/login';
+						$getBoDetails = DB::table($this->table)->where('parent_id',$insertData->parent_id)->first();
+						$data = ['name'=>$insertData->name,'email'=>$insertData->email,'password'=>$postdata['password'],'login_link'=>$loginUrl,'bo_name'=>$getBoDetails->name];
+						CRUDBooster::sendEmail(['to'=>$insertData->email,'data'=>$data,'template'=>'contributer_account_creation']);
+					}
 					$result['data'] = $insertData;
 					
 				}
@@ -93,11 +99,14 @@ use GeoIp2\Database\Reader;
 						if(!empty($getDispData)){
 							foreach($getDispData as $dispVal){
 								$assign_user = !empty($dispVal['assign_user']) ? unserialize($dispVal['assign_user']) : [];
-								if($key = array_search($result['data']->id, $assign_user) ){
+								if(is_array($assign_user)){
 
-									unset($assign_user[$key]);
+									if($key = array_search($result['data']->id, $assign_user) ){
+	
+										unset($assign_user[$key]);
+									}
+									DB::table("master_locations")->where("id",$dispVal['id'])->update(['assign_user' => serialize($assign_user)]);
 								}
-								DB::table("master_locations")->where("id",$dispVal['id'])->update(['assign_user' => serialize($assign_user)]);
 
 							}
 						}
