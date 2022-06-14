@@ -6,7 +6,7 @@ use Request;
 use DB;
 use CRUDBooster;
 use App\User;
-// use GeoIp2\Database\Reader;
+use GeoIp2\Database\Reader;
 
 		class ApiBusinessContributersUpdateController extends \crocodicstudio\crudbooster\controllers\ApiController {
 
