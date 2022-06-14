@@ -42,7 +42,7 @@
 
 			# START FORM DO NOT REMOVE THIS LINE
 			$this->form = [];
-			$this->form[] = ['label'=>'Status','name'=>'status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'1|Active;0|InActive'];
+			$this->form[] = ['label'=>'Status','name'=>'status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'1|Active;0|InActive;3|Suspend'];
 			$this->form[] = ['label'=>'Claim Status','name'=>'claim_status','type'=>'radio','validation'=>'required','width'=>'col-sm-10','dataenum'=>'Verified|Verified;Unverified|Unverified;Pending|Pending'];
 			$this->form[] = ['label'=>'Id','name'=>'id','type'=>'text','width'=>'col-sm-10','readonly'=>true];
 			$this->form[] = ['label'=>'Name','name'=>'name','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
@@ -63,7 +63,7 @@
 
 
 			$customHtml = "<a href=".CRUDBooster::mainpath('notify-bo/')." class='btn btn-primary notifyBo'>Notify Bo</a>";
-			$this->form[] = ['label'=>'Notify Bo','name'=>'notify_bo','type'=>'custom','width'=>'col-sm-9','html'=>$customHtml];
+			$this->form[] = ['label'=>'','name'=>'notify_bo','type'=>'custom','width'=>'col-sm-9','html'=>$customHtml];
 			# END FORM DO NOT REMOVE THIS LINE
 
 			# OLD START FORM
@@ -355,7 +355,7 @@
 	        if($claim_status){
 				$row->{'claim_status'} = $claim_status->status;
 	        }else{
-	        	$row->{'claim_status'} = 'No records found';
+	        	$row->{'claim_status'} = 'Unverified';
 	        }
 	        if (! CRUDBooster::isRead() && $this->global_privilege == false || $this->button_edit == false) {
 	            CRUDBooster::insertLog(trans("crudbooster.log_try_edit", [
