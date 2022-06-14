@@ -27,8 +27,6 @@ use GeoIp2\Database\Reader;
 					$this->retail_store = $postdata['retail_store'];
 				}
 				
-
-
 				$postdata["remember_token"] = $this->user_token;
 
 				$postdata["referrer_id"] = $this->user_token;
@@ -58,6 +56,37 @@ use GeoIp2\Database\Reader;
 				unset($postdata['retail_store']);
 			
 		    }
+			public function execute_api(){
+				$posts = Request::all();
+				
+				$result = [];
+				$result['api_status'] = 0;
+				$result['api_http'] = 401;
+				$result['data'] = 0;
+				$debug_mode_message = 'You are in debug mode !';
+				if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+					$result['api_authorization'] = $debug_mode_message;
+				}
+				if(!empty($posts['type'] && $posts['type'] == 'check_email' )){
+					if(!empty($posts['email'])){
+						$checkIfEmailExists = DB::table($this->table)->where('email',$posts['email'])->first();
+						if(!empty($checkIfEmailExists)){
+							$result['data'] = 1;
+							$result['api_message'] = 'The email already exists';
+							return response()->json($result, 200);
+						}else{
+							$result['data'] = 0;
+							$result['api_message'] = '';
+							return response()->json($result, 200);
+						}
+					
+					}
+				}
+				
+				
+				return Parent::execute_api();
+			}
+
 
 		    public function hook_query(&$query) {
 		        //This method is to customize the sql query
