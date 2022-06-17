@@ -82,6 +82,14 @@ use GeoIp2\Database\Reader;
 					
 					}
 				}
+				if(!empty($posts['type'] && $posts['type'] == 'status_change' )){
+					if(!empty($posts['id']) && !empty($posts['status'])){
+						DB::table($this->table)->where('id',$posts['id'])->update(['status'=>$posts['status']]);
+						$result['data'] = 1;
+						$result['api_message'] = '';
+						return response()->json($result, 200);
+					}
+				}
 				
 				
 				return Parent::execute_api();

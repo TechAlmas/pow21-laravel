@@ -67,6 +67,8 @@
 							
 							}
 							$uVal->retail_store = $dispArray;
+							$uVal->created_at = date('d-m-Y',strtotime($uVal->created_at));
+							$uVal->updated_at = date('d-m-Y',strtotime($uVal->updated_at));
 						}
 						
 					}
