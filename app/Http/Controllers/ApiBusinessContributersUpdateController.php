@@ -6,7 +6,7 @@ use Request;
 use DB;
 use CRUDBooster;
 use App\User;
-// use GeoIp2\Database\Reader;
+use GeoIp2\Database\Reader;
 
 		class ApiBusinessContributersUpdateController extends \crocodicstudio\crudbooster\controllers\ApiController {
 
@@ -16,7 +16,7 @@ use App\User;
 				$this->method_type = "post";  
 				$this->retail_store = [];  
 				$this->user_token =uniqid(); 
-				// $this->reader = new Reader('/home/miopro/public_html/admin/vendor/geoip2/geoip2/maxmind-db/GeoIP2-City.mmdb'); 
+				$this->reader = new Reader('/home/miopro/public_html/admin/vendor/geoip2/geoip2/maxmind-db/GeoIP2-City.mmdb'); 
 		    }
 		
 
@@ -31,15 +31,15 @@ use App\User;
 
 				$postdata["referrer_id"] = $this->user_token;
 
-				// $clientIp = Request::getClientIp(true);
+				$clientIp = Request::getClientIp(true);
 
-				// $record = $this->reader->city($clientIp);
-				// // $postdata['country'] = $record->country->name;
-				// // $postdata['state'] = $record->mostSpecificSubdivision->name;
-				// // $postdata['city'] = $record->city->name;
-				// $postdata['latitude'] = $record->location->latitude;
-				// $postdata['longitude'] = $record->location->longitude;
-				// $postdata['ip'] = $record->traits->ipAddress;
+				$record = $this->reader->city($clientIp);
+				// $postdata['country'] = $record->country->name;
+				// $postdata['state'] = $record->mostSpecificSubdivision->name;
+				// $postdata['city'] = $record->city->name;
+				$postdata['latitude'] = $record->location->latitude;
+				$postdata['longitude'] = $record->location->longitude;
+				$postdata['ip'] = $record->traits->ipAddress;
 				if(!empty($postdata['type'])){
 					$this->type = $postdata['type'];
 				}
@@ -119,7 +119,7 @@ use App\User;
 						$loginUrl = 'https://www.pow21.com/login';
 						$getBoDetails = DB::table($this->table)->where('parent_id',$insertData->parent_id)->first();
 						$data = ['name'=>$insertData->name,'email'=>$insertData->email,'password'=>$postdata['password'],'login_link'=>$loginUrl,'bo_name'=>$getBoDetails->name];
-						// CRUDBooster::sendEmail(['to'=>$insertData->email,'data'=>$data,'template'=>'contributer_account_creation']);
+						CRUDBooster::sendEmail(['to'=>$insertData->email,'data'=>$data,'template'=>'contributer_account_creation']);
 					}
 					$result['data'] = $insertData;
 					
