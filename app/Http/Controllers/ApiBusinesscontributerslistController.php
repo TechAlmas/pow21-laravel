@@ -40,7 +40,7 @@
 					$getUserData = DB::table('cms_users')->where('parent_id',$postdata['user_id'])->get();
 					if($getUserData->isNotEmpty()){
 						foreach($getUserData as $uVal){
-							$disp = DB::table('master_locations')->where('status','!=',0)->where('status','!=',3)->get()->toArray();
+							$disp = DB::table('master_locations')->where('status','!=',0)->get()->toArray();
 							$disp = json_decode(json_encode($disp), true);
 							$dispArray = [];
 							$dispCount = 0;
@@ -76,7 +76,7 @@
 				$result['data'] = $getUserData;
 
 				if(!empty($postdata['type'] && $postdata['type'] == 'add_edit' )){
-					$disp = DB::table('master_locations')->where('status','!=',0)->where('status','!=',3)->get()->toArray();
+					$disp = DB::table('master_locations')->where('status','!=',0)->get()->toArray();
 					$disp = json_decode(json_encode($disp), true);
 				
 					//$total = (array)$disp;

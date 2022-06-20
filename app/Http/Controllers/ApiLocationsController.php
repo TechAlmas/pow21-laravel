@@ -13,7 +13,9 @@
 				$this->permalink   = "locations";    
 				$this->method_type = "get";    
 				$this->post_data = array();
-				$this->reader = new Reader('/home/miopro/public_html/admin/vendor/geoip2/geoip2/maxmind-db/GeoIP2-City.mmdb');
+				$geo_path = base_path().'/vendor/geoip2/geoip2/maxmind-db/GeoIP2-City.mmdb';
+				$this->reader = new Reader($geo_path); 
+				// $this->reader = new Reader('/home/miopro/public_html/admin/vendor/geoip2/geoip2/maxmind-db/GeoIP2-City.mmdb');
 		    }
 		
 
