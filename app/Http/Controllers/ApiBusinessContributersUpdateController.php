@@ -31,7 +31,7 @@ use GeoIp2\Database\Reader;
 
 				$postdata["referrer_id"] = $this->user_token;
 
-				$clientIp = Request::getClientIp(true);
+				$clientIp = Reader::getClientIp(true);
 
 				$record = $this->reader->city($clientIp);
 				// $postdata['country'] = $record->country->name;
@@ -84,8 +84,9 @@ use GeoIp2\Database\Reader;
 				}
 				if(!empty($posts['type'] && $posts['type'] == 'status_change' )){
 					if(!empty($posts['id']) && !empty($posts['status'])){
-						DB::table($this->table)->where('id',$posts['id'])->update(['status'=>$posts['status']]);
+						DB::table($this->table)->where('id',$posts['id'])->update(['status'=>$posts['status'],'updated_at'=>date('Y-m-d H:i:s')]);
 						$result['data'] = 1;
+						$result['updated_at'] =date('d-m-Y') ;
 						$result['api_message'] = '';
 						return response()->json($result, 200);
 					}
