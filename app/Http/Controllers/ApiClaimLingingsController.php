@@ -143,10 +143,10 @@
 						$data = ['name'=>$getClaimData->first_name];
 
 						if($this->claim_listing_with_signup ){
-							CRUDBooster::sendEmail(['to'=>$getClaimData->e_mail,'data'=>$data,'template'=>'claim_listing']);	
+							CRUDBooster::sendEmail(['to'=>$getClaimData->e_mail,'data'=>$data,'template'=>'claim_listing_signup']);	
 						}else{
 
-							CRUDBooster::sendEmail(['to'=>$getClaimData->e_mail,'data'=>$data,'template'=>'claim_listing_signup']);	
+							CRUDBooster::sendEmail(['to'=>$getClaimData->e_mail,'data'=>$data,'template'=>'claim_listing_existing']);	
 						}
 						$getAdminEmail = DB::table('cms_users')->where('id_cms_privileges',1)->value('email');
 						if(!empty($getAdminEmail)){
