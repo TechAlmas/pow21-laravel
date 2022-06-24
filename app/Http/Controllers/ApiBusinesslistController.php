@@ -31,7 +31,7 @@
 		        $disp = DB::table('master_locations')
 		                // ->leftJoin('dispensaries_users','master_locations.id','dispensaries_users.dispansary_id')
 						// ->where('dispensaries_users.user_id',$postdata['user_id'])
-						->select('master_locations.*',DB::raw('null as claim_status'))->where('status','!=',0)->where('status','!=',3)->get()->toArray();
+						->select('master_locations.*',DB::raw('null as claim_status'))->where('status','!=',0)->get()->toArray();
 
 			
 				$disp = json_decode(json_encode($disp), true);

@@ -78,7 +78,7 @@
 
 
 
-		    			$sql = DB::select( DB::raw("SELECT master_locations.*,master_cities.city,master_states.state, master_prices.price FROM `master_locations` LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.city_id = ".$city_id_data." AND master_prices.mass_id = 1 AND master_prices.price > 0 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
+		    			$sql = DB::select( DB::raw("SELECT master_locations.*,master_cities.city,master_states.state, master_prices.price FROM `master_locations` LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.city_id = ".$city_id_data." AND master_prices.mass_id = 1 AND master_prices.price > 0 AND master_locations.status != 0 AND master_locations.status != 3  GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
 
 		    			//print_r($sql); exit;
 
@@ -92,11 +92,11 @@
 
 		    			if(count($loc_array) > 0)
 		    			{
-		    				$sql1 = DB::select( DB::raw("SELECT master_locations.*,master_cities.city,master_states.state, master_prices.price FROM `master_locations` LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.id NOT IN (".implode(',',$loc_array).") AND master_locations.state_id = ".$state_id." AND master_prices.mass_id = 1 AND master_prices.price > 0 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
+		    				$sql1 = DB::select( DB::raw("SELECT master_locations.*,master_cities.city,master_states.state, master_prices.price FROM `master_locations` LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.id NOT IN (".implode(',',$loc_array).") AND master_locations.state_id = ".$state_id." AND master_prices.mass_id = 1 AND master_prices.price > 0 AND master_locations.status != 0 AND master_locations.status != 3 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
 		    			}
 		    			else
 		    			{
-		    				$sql1 = DB::select( DB::raw("SELECT master_locations.*,master_cities.city,master_states.state, master_prices.price FROM `master_locations` LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.state_id = ".$state_id." AND master_prices.mass_id = 1 AND master_prices.price > 0 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
+		    				$sql1 = DB::select( DB::raw("SELECT master_locations.*,master_cities.city,master_states.state, master_prices.price FROM `master_locations` LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.state_id = ".$state_id." AND master_prices.mass_id = 1 AND master_prices.price > 0 AND master_locations.status != 0 AND master_locations.status != 3 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
 		    			}
 
 		    			
@@ -167,7 +167,7 @@
 
 			       		$sql = DB::select( DB::raw("SELECT master_locations.*,master_cities.city,master_states.state, master_prices.price,master_strains.category  FROM `master_locations`
 			       			LEFT JOIN master_strains ON master_strains.id =". $postdata["strain"]."
-			       			 LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.city_id = ".$city_id_data." AND master_prices.mass_id = 1 AND master_prices.strain_id = ".$postdata["strain"]." AND master_prices.price > 0 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
+			       			 LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.city_id = ".$city_id_data." AND master_prices.mass_id = 1 AND master_prices.strain_id = ".$postdata["strain"]." AND master_prices.price > 0 AND master_locations.status != 0 AND master_locations.status != 3 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
 
 			       		foreach ($sql as $sq) {
 		    				$id = $sq->id;
@@ -179,14 +179,14 @@
 
 		    			$sql1 = DB::select( DB::raw("SELECT master_locations.*,master_cities.city,master_states.state, master_prices.price,master_strains.category  FROM `master_locations`
 			       			LEFT JOIN master_strains ON master_strains.id =". $postdata["strain"]."
-			       			 LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.id NOT IN (".implode(',',$loc_array).") AND master_locations.state_id = ".$state_id." AND master_prices.mass_id = 1 AND master_prices.strain_id = ".$postdata["strain"]." AND master_prices.price > 0 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
+			       			 LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.id NOT IN (".implode(',',$loc_array).") AND master_locations.state_id = ".$state_id." AND master_prices.mass_id = 1 AND master_prices.strain_id = ".$postdata["strain"]." AND master_prices.price > 0 AND master_locations.status != 0 AND master_locations.status != 3 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
 		    			}
 
 		    			else
 		    			{
 		    			$sql1 =	DB::select( DB::raw("SELECT master_locations.*,master_cities.city,master_states.state, master_prices.price,master_strains.category  FROM `master_locations`
 			       			LEFT JOIN master_strains ON master_strains.id =". $postdata["strain"]."
-			       			 LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.state_id = ".$state_id." AND master_prices.mass_id = 1 AND master_prices.strain_id = ".$postdata["strain"]." AND master_prices.price > 0 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
+			       			 LEFT JOIN master_cities ON master_cities.id = master_locations.city_id LEFT JOIN master_states ON master_states.id = master_locations.state_id RIGHT JOIN master_prices ON master_prices.city_id = master_cities.id AND master_prices.location_id = master_locations.id WHERE master_locations.state_id = ".$state_id." AND master_prices.mass_id = 1 AND master_prices.strain_id = ".$postdata["strain"]." AND master_prices.price > 0 AND master_locations.status != 0 AND master_locations.status != 3 GROUP BY master_prices.location_id ORDER BY master_prices.price ASC"));
 		    			}
 
 		    			//print_r($sql); exit();
