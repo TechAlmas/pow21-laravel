@@ -50,13 +50,18 @@
 			$this->form[] = ['label'=>'Address 2','name'=>'address2','type'=>'text','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'City','name'=>'city','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'State','name'=>'state','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'Zip Code','name'=>'zip_code','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
+			if (CRUDBooster::getCurrentMethod() != 'getDetail'){
+				$this->form[] = ['label'=>'Zip Code','name'=>'zip_code','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
+			}
 			$this->form[] = ['label'=>'Country','name'=>'country','type'=>'text','validation'=>'required','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Logo','name'=>'logoUrl','type'=>'upload','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Tags','name'=>'license_type','type'=>'text','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Website','name'=>'website','type'=>'text','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'Email','name'=>'email','type'=>'email','validation'=>'email','width'=>'col-sm-10'];
-			$this->form[] = ['label'=>'Email 2','name'=>'email2','type'=>'text','width'=>'col-sm-10'];
+			if (CRUDBooster::getCurrentMethod() != 'getDetail'){
+
+				$this->form[] = ['label'=>'Email','name'=>'email','type'=>'email','validation'=>'email','width'=>'col-sm-10'];
+				$this->form[] = ['label'=>'Email 2','name'=>'email2','type'=>'text','width'=>'col-sm-10'];
+			}
 			$this->form[] = ['label'=>'Phone','name'=>'phone','type'=>'text','width'=>'col-sm-10'];
 			$this->form[] = ['label'=>'Store Meta','name'=>'store_meta','type'=>'select2-multi','width'=>'col-sm-10','datatable'=>'store_meta,title'];
 			$this->form[] = ['label'=>'Assign User','name'=>'assign_user','type'=>'select2-multi','width'=>'col-sm-10','datatable'=>'cms_users,name','datatable_where'=>'id_cms_privileges = 6 || id_cms_privileges = 7'];
@@ -341,6 +346,7 @@
 	    |
 	    */
 
+
 		public function getEdit($id)
 	    {
 	        $this->cbLoader();
@@ -576,6 +582,40 @@
 
 			CRUDBooster::redirect(CRUDBooster::mainpath(), trans("Business Owners Notified Successfully"), 'success');
 		
+		}
+
+		public function getDetail($id)
+		{
+			$this->cbLoader();
+			$row = DB::table($this->table)->where($this->primary_key, $id)->first();
+			if(!empty($row)){
+				$row->claim_status = DB::table('claim_listings')->where('listing_id',$row->id)->value('status');
+				if($row->status == 1){
+					$row->status = 'Active';
+				}else if($row->status == 0){
+					$row->status = 'Inactive';
+				}else if($row->status == 3){
+					$row->status = 'Suspend';
+				}
+			}
+
+			if (! CRUDBooster::isRead() && $this->global_privilege == false || $this->button_detail == false) {
+				CRUDBooster::insertLog(trans("crudbooster.log_try_view", [
+					'name' => $row->{$this->title_field},
+					'module' => CRUDBooster::getCurrentModule()->name,
+				]));
+				CRUDBooster::redirect(CRUDBooster::adminPath(), trans('crudbooster.denied_access'));
+			}
+	
+			$module = CRUDBooster::getCurrentModule();
+	
+			$page_menu = Route::getCurrentRoute()->getActionName();
+			$page_title = trans("crudbooster.detail_data_page_title", ['module' => $module->name, 'name' => $row->{$this->title_field}]);
+			$command = 'detail';
+	
+			Session::put('current_row_id', $id);
+	
+			return view('crudbooster::default.form', compact('row', 'page_menu', 'page_title', 'command', 'id'));
 		}
 
 
