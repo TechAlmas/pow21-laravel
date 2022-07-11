@@ -110,7 +110,7 @@
 		        						->first();
 		        	}
 		        	
-		        	if(count($current_price) > 0){
+		        	if(is_countable($current_price) && count($current_price) > 0){
 		        		$new_data["set_price_id"] = $current_price->master_search_id;	
 			        	$new_data["set_price_history_id"] = $current_price->id;	
 
