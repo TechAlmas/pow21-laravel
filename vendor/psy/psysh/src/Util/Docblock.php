@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2018 Justin Hileman
+ * (c) 2012-2022 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -82,10 +82,10 @@ class Docblock
      *
      * @param string $comment The docblock
      */
-    protected function setComment($comment)
+    protected function setComment(string $comment)
     {
-        $this->desc    = '';
-        $this->tags    = [];
+        $this->desc = '';
+        $this->tags = [];
         $this->comment = $comment;
 
         $this->parseComment($comment);
@@ -98,21 +98,26 @@ class Docblock
      *
      * @return int Prefix length
      */
-    protected static function prefixLength(array $lines)
+    protected static function prefixLength(array $lines): int
     {
         // find only lines with interesting things
-        $lines = array_filter($lines, function ($line) {
-            return substr($line, strspn($line, "* \t\n\r\0\x0B"));
+        $lines = \array_filter($lines, function ($line) {
+            return \substr($line, \strspn($line, "* \t\n\r\0\x0B"));
         });
 
         // if we sort the lines, we only have to compare two items
-        sort($lines);
+        \sort($lines);
 
-        $first = reset($lines);
-        $last  = end($lines);
+        $first = \reset($lines);
+        $last = \end($lines);
+
+        // Special case for single-line comments
+        if (\count($lines) === 1) {
+            return \strspn($first, "* \t\n\r\0\x0B");
+        }
 
         // find the longest common substring
-        $count = min(strlen($first), strlen($last));
+        $count = \min(\strlen($first), \strlen($last));
         for ($i = 0; $i < $count; $i++) {
             if ($first[$i] !== $last[$i]) {
                 return $i;
@@ -127,18 +132,18 @@ class Docblock
      *
      * @param string $comment The docblock
      */
-    protected function parseComment($comment)
+    protected function parseComment(string $comment)
     {
         // Strip the opening and closing tags of the docblock
-        $comment = substr($comment, 3, -2);
+        $comment = \substr($comment, 3, -2);
 
         // Split into arrays of lines
-        $comment = array_filter(preg_split('/\r?\n\r?/', $comment));
+        $comment = \array_filter(\preg_split('/\r?\n\r?/', $comment));
 
         // Trim asterisks and whitespace from the beginning and whitespace from the end of lines
         $prefixLength = self::prefixLength($comment);
-        $comment = array_map(function ($line) use ($prefixLength) {
-            return rtrim(substr($line, $prefixLength));
+        $comment = \array_map(function ($line) use ($prefixLength) {
+            return \rtrim(\substr($line, $prefixLength));
         }, $comment);
 
         // Group the lines together by @tags
@@ -157,30 +162,30 @@ class Docblock
 
         // Parse the blocks
         foreach ($blocks as $block => $body) {
-            $body = trim(implode("\n", $body));
+            $body = \trim(\implode("\n", $body));
 
             if ($block === 0 && !self::isTagged($body)) {
                 // This is the description block
                 $this->desc = $body;
             } else {
                 // This block is tagged
-                $tag  = substr(self::strTag($body), 1);
-                $body = ltrim(substr($body, strlen($tag) + 2));
+                $tag = \substr(self::strTag($body), 1);
+                $body = \ltrim(\substr($body, \strlen($tag) + 2));
 
                 if (isset(self::$vectors[$tag])) {
                     // The tagged block is a vector
-                    $count = count(self::$vectors[$tag]);
+                    $count = \count(self::$vectors[$tag]);
                     if ($body) {
-                        $parts = preg_split('/\s+/', $body, $count);
+                        $parts = \preg_split('/\s+/', $body, $count);
                     } else {
                         $parts = [];
                     }
 
                     // Default the trailing values
-                    $parts = array_pad($parts, $count, null);
+                    $parts = \array_pad($parts, $count, null);
 
                     // Store as a mapped array
-                    $this->tags[$tag][] = array_combine(self::$vectors[$tag], $parts);
+                    $this->tags[$tag][] = \array_combine(self::$vectors[$tag], $parts);
                 } else {
                     // The tagged block is only text
                     $this->tags[$tag][] = $body;
@@ -196,9 +201,9 @@ class Docblock
      *
      * @return bool
      */
-    public function hasTag($tag)
+    public function hasTag(string $tag): bool
     {
-        return is_array($this->tags) && array_key_exists($tag, $this->tags);
+        return \is_array($this->tags) && \array_key_exists($tag, $this->tags);
     }
 
     /**
@@ -208,7 +213,7 @@ class Docblock
      *
      * @return array
      */
-    public function tag($tag)
+    public function tag(string $tag): array
     {
         return $this->hasTag($tag) ? $this->tags[$tag] : null;
     }
@@ -220,9 +225,9 @@ class Docblock
      *
      * @return bool
      */
-    public static function isTagged($str)
+    public static function isTagged(string $str): bool
     {
-        return isset($str[1]) && $str[0] === '@' && ctype_alpha($str[1]);
+        return isset($str[1]) && $str[0] === '@' && !\preg_match('/[^A-Za-z]/', $str[1]);
     }
 
     /**
@@ -232,9 +237,9 @@ class Docblock
      *
      * @return string|null
      */
-    public static function strTag($str)
+    public static function strTag(string $str)
     {
-        if (preg_match('/^@[a-z0-9_]+/', $str, $matches)) {
+        if (\preg_match('/^@[a-z0-9_]+/', $str, $matches)) {
             return $matches[0];
         }
     }

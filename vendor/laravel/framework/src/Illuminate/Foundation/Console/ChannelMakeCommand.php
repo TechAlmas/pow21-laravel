@@ -36,8 +36,8 @@ class ChannelMakeCommand extends GeneratorCommand
     protected function buildClass($name)
     {
         return str_replace(
-            'DummyUser',
-            class_basename(config('auth.providers.users.model')),
+            ['DummyUser', '{{ userModel }}'],
+            class_basename($this->userProviderModel()),
             parent::buildClass($name)
         );
     }

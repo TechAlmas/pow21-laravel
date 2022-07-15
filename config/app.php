@@ -148,7 +148,7 @@ return [
         Illuminate\View\ViewServiceProvider::class,
 
         crocodicstudio\crudbooster\CRUDBoosterServiceProvider::class,
-        Barryvdh\Cors\ServiceProvider::class,
+        Fruitcake\Cors\CorsServiceProvider::class,
         /*
          * Package Service Providers...
          */

@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2018 Justin Hileman
+ * (c) 2012-2022 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -95,7 +95,7 @@ class EditCommand extends Command implements ContextAware
         $shouldRemoveFile = false;
 
         if ($filePath === null) {
-            $filePath = tempnam($this->runtimeDir, 'psysh-edit-command');
+            $filePath = \tempnam($this->runtimeDir, 'psysh-edit-command');
             $shouldRemoveFile = true;
         }
 
@@ -104,6 +104,8 @@ class EditCommand extends Command implements ContextAware
         if ($execute) {
             $this->getApplication()->addInput($editedContent);
         }
+
+        return 0;
     }
 
     /**
@@ -113,7 +115,7 @@ class EditCommand extends Command implements ContextAware
      *
      * @return bool
      */
-    private function shouldExecuteFile($execOption, $noExecOption, $filePath)
+    private function shouldExecuteFile(bool $execOption, bool $noExecOption, string $filePath = null): bool
     {
         if ($execOption) {
             return true;
@@ -134,13 +136,13 @@ class EditCommand extends Command implements ContextAware
      *
      * @throws \InvalidArgumentException If the variable is not found in the current context
      */
-    private function extractFilePath($fileArgument)
+    private function extractFilePath(string $fileArgument = null)
     {
         // If the file argument was a variable, get it from the context
         if ($fileArgument !== null &&
-            strlen($fileArgument) > 0 &&
+            $fileArgument !== '' &&
             $fileArgument[0] === '$') {
-            $fileArgument = $this->context->get(preg_replace('/^\$/', '', $fileArgument));
+            $fileArgument = $this->context->get(\preg_replace('/^\$/', '', $fileArgument));
         }
 
         return $fileArgument;
@@ -148,24 +150,25 @@ class EditCommand extends Command implements ContextAware
 
     /**
      * @param string $filePath
-     * @param string $shouldRemoveFile
+     * @param bool   $shouldRemoveFile
      *
      * @return string
      *
      * @throws \UnexpectedValueException if file_get_contents on $filePath returns false instead of a string
      */
-    private function editFile($filePath, $shouldRemoveFile)
+    private function editFile(string $filePath, bool $shouldRemoveFile): string
     {
-        $escapedFilePath = escapeshellarg($filePath);
+        $escapedFilePath = \escapeshellarg($filePath);
+        $editor = (isset($_SERVER['EDITOR']) && $_SERVER['EDITOR']) ? $_SERVER['EDITOR'] : 'nano';
 
         $pipes = [];
-        $proc = proc_open((getenv('EDITOR') ?: 'nano') . " {$escapedFilePath}", [STDIN, STDOUT, STDERR], $pipes);
-        proc_close($proc);
+        $proc = \proc_open("{$editor} {$escapedFilePath}", [\STDIN, \STDOUT, \STDERR], $pipes);
+        \proc_close($proc);
 
-        $editedContent = @file_get_contents($filePath);
+        $editedContent = @\file_get_contents($filePath);
 
         if ($shouldRemoveFile) {
-            @unlink($filePath);
+            @\unlink($filePath);
         }
 
         if ($editedContent === false) {

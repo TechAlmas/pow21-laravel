@@ -11,9 +11,9 @@
 
 namespace Symfony\Component\HttpKernel\DependencyInjection;
 
+use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ServiceLocatorTagPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Fragment\FragmentRendererInterface;
@@ -30,6 +30,10 @@ class FragmentRendererPass implements CompilerPassInterface
 
     public function __construct(string $handlerService = 'fragment.handler', string $rendererTag = 'kernel.fragment_renderer')
     {
+        if (0 < \func_num_args()) {
+            trigger_deprecation('symfony/http-kernel', '5.3', 'Configuring "%s" is deprecated.', __CLASS__);
+        }
+
         $this->handlerService = $handlerService;
         $this->rendererTag = $rendererTag;
     }
@@ -41,7 +45,7 @@ class FragmentRendererPass implements CompilerPassInterface
         }
 
         $definition = $container->getDefinition($this->handlerService);
-        $renderers = array();
+        $renderers = [];
         foreach ($container->findTaggedServiceIds($this->rendererTag, true) as $id => $tags) {
             $def = $container->getDefinition($id);
             $class = $container->getParameterBag()->resolveValue($def->getClass());

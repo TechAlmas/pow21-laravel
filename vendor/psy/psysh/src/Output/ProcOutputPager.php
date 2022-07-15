@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2018 Justin Hileman
+ * (c) 2012-2022 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -32,12 +32,12 @@ class ProcOutputPager extends StreamOutput implements OutputPager
      * Constructor.
      *
      * @param StreamOutput $output
-     * @param string       $cmd    Pager process command (default: 'less -R -S -F -X')
+     * @param string       $cmd    Pager process command (default: 'less -R -F -X')
      */
-    public function __construct(StreamOutput $output, $cmd = 'less -R -S -F -X')
+    public function __construct(StreamOutput $output, string $cmd = 'less -R -F -X')
     {
         $this->stream = $output->getStream();
-        $this->cmd    = $cmd;
+        $this->cmd = $cmd;
     }
 
     /**
@@ -51,14 +51,15 @@ class ProcOutputPager extends StreamOutput implements OutputPager
     public function doWrite($message, $newline)
     {
         $pipe = $this->getPipe();
-        if (false === @fwrite($pipe, $message . ($newline ? PHP_EOL : ''))) {
+        if (false === @\fwrite($pipe, $message.($newline ? \PHP_EOL : ''))) {
             // @codeCoverageIgnoreStart
             // should never happen
+            $this->close();
             throw new \RuntimeException('Unable to write output');
             // @codeCoverageIgnoreEnd
         }
 
-        fflush($pipe);
+        \fflush($pipe);
     }
 
     /**
@@ -67,17 +68,18 @@ class ProcOutputPager extends StreamOutput implements OutputPager
     public function close()
     {
         if (isset($this->pipe)) {
-            fclose($this->pipe);
+            \fclose($this->pipe);
         }
 
         if (isset($this->proc)) {
-            $exit = proc_close($this->proc);
+            $exit = \proc_close($this->proc);
             if ($exit !== 0) {
                 throw new \RuntimeException('Error closing output stream');
             }
         }
 
-        unset($this->pipe, $this->proc);
+        $this->pipe = null;
+        $this->proc = null;
     }
 
     /**
@@ -88,10 +90,10 @@ class ProcOutputPager extends StreamOutput implements OutputPager
     private function getPipe()
     {
         if (!isset($this->pipe) || !isset($this->proc)) {
-            $desc = [['pipe', 'r'], $this->stream, fopen('php://stderr', 'w')];
-            $this->proc = proc_open($this->cmd, $desc, $pipes);
+            $desc = [['pipe', 'r'], $this->stream, \fopen('php://stderr', 'w')];
+            $this->proc = \proc_open($this->cmd, $desc, $pipes);
 
-            if (!is_resource($this->proc)) {
+            if (!\is_resource($this->proc)) {
                 throw new \RuntimeException('Error opening output stream');
             }
 

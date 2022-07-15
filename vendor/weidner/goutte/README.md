@@ -1,6 +1,6 @@
-# Laravel 5 Facade for Goutte
+# Laravel Facade for Goutte
 
-This repository implements a simple [ServiceProvider](https://laravel.com/docs/master/providers) that makes a singleton instance of the Goutte client easily accessible via a [Facade](https://laravel.com/docs/master/facades) in [Laravel 5](http://laravel.com). See [@FriendsOfPHP/Goutte](https://github.com/FriendsOfPHP/Goutte) for more information about the PHP web scraper and its interfaces.
+This repository implements a simple [ServiceProvider](https://laravel.com/docs/master/providers) that makes a singleton instance of the Goutte client easily accessible via a [Facade](https://laravel.com/docs/master/facades) in [Laravel](http://laravel.com). See [@FriendsOfPHP/Goutte](https://github.com/FriendsOfPHP/Goutte) for more information about the PHP web scraper and its interfaces.
 
 ## Installation using [Composer](https://getcomposer.org/)
 
@@ -23,8 +23,8 @@ This will add the following lines to your `composer.json` and download the proje
 
     "require": {
         "php": ">=5.5.9",
-        "laravel/framework": "5.2.*",
-        "weidner/goutte": "1.0.*",
+        "laravel/framework": "^5.5",
+        "weidner/goutte": "^1",
         // ...
     },
 
@@ -51,7 +51,7 @@ return [
         /*
          * Package Service Providers...
          */
-        Weidner\Goutte\GoutteServiceProvider::class, // [1]
+        Weidner\Goutte\GoutteServiceProvider::class, // [1] This will register the Package in the laravel echo system
 
         /*
          * Application Service Providers...
@@ -72,7 +72,7 @@ return [
 
         // ...
 
-        'Goutte' => Weidner\Goutte\GoutteFacade::class, // [2]
+        'Goutte' => Weidner\Goutte\GoutteFacade::class, // [2] It will register as an alias for the Goutte facade
         'Hash' => Illuminate\Support\Facades\Hash::class,
 
         // ...
@@ -97,6 +97,8 @@ Route::get('/', function() {
 ```
 
 *TIP:* If you retrieve a "Class 'Goutte' not found"-Exception try to update the autoloader by running `composer dump-autoload` in your project root.
+
+*TIP:* You can use the package with [Lumen](https://lumen.laravel.com/) as well. Register the `GoutteServiceProvider` in `bootstrap/app.php` and provide the missing path to your configuration directory in your `AppServiceProvider` (ref [\#34](https://github.com/dweidner/laravel-goutte/issues/34/)).
 
 ## Configuration
 
