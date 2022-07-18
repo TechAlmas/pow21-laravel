@@ -23,9 +23,13 @@ class JsonFileDumper extends FileDumper
     /**
      * {@inheritdoc}
      */
-    public function formatCatalogue(MessageCatalogue $messages, string $domain, array $options = []): string
+    public function formatCatalogue(MessageCatalogue $messages, $domain, array $options = array())
     {
-        $flags = $options['json_encoding'] ?? \JSON_PRETTY_PRINT;
+        if (isset($options['json_encoding'])) {
+            $flags = $options['json_encoding'];
+        } else {
+            $flags = JSON_PRETTY_PRINT;
+        }
 
         return json_encode($messages->all($domain), $flags);
     }
@@ -33,7 +37,7 @@ class JsonFileDumper extends FileDumper
     /**
      * {@inheritdoc}
      */
-    protected function getExtension(): string
+    protected function getExtension()
     {
         return 'json';
     }

@@ -14,16 +14,6 @@ use Validator;
 
 class CRUDBooster
 {
-    /**
-     *	Comma-delimited data output from the child table
-     */
-    public static function echoSelect2Mult($values, $table, $id, $name) {
-        $values = explode(",", $values);
-        return implode(", ", DB::table($table)->whereIn($id, $values)->pluck($name)->toArray());
-        //implode(", ", DB::table("syudo_list_pokemons_types")->whereIn("id", explode(",", $row->type))->pluck("name")->toArray())
-
-    }
-
     public static function uploadBase64($value, $id = null)
     {
         if (! self::myId()) {
@@ -42,13 +32,15 @@ class CRUDBooster
         @$mime_type = explode('/', $mime_type);
         @$mime_type = $mime_type[1];
         if ($mime_type) {
-            $filePath = 'uploads/'.$userID.'/'.date('Y-m');
-            Storage::makeDirectory($filePath);
-            $filename = md5(str_random(5)).'.'.$mime_type;
-            if (Storage::put($filePath.'/'.$filename, $filedata)) {
-                self::resizeImage($filePath.'/'.$filename);
+            if (in_array($mime_type, $uploads_format_candidate)) {
+                $filePath = 'uploads/'.$userID.'/'.date('Y-m');
+                Storage::makeDirectory($filePath);
+                $filename = md5(str_random(5)).'.'.$mime_type;
+                if (Storage::put($filePath.'/'.$filename, $filedata)) {
+                    self::resizeImage($filePath.'/'.$filename);
 
-                return $filePath.'/'.$filename;
+                    return $filePath.'/'.$filename;
+                }
             }
         }
     }
@@ -69,11 +61,7 @@ class CRUDBooster
             $file = Request::file($name);
             $ext = $file->getClientOriginalExtension();
             $filename = str_slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
-            if(method_exists($file, 'getClientSize')) {
-                $filesize = $file->getClientSize() / 1024;
-            } else {
-                $filesize = $file->getSize() / 1024;
-            }
+            $filesize = $file->getClientSize() / 1024;
             $file_path = 'uploads/'.$userID.'/'.date('Y-m');
 
             //Create Directory Monthly
@@ -103,7 +91,6 @@ class CRUDBooster
         $images_ext = explode(',', $images_ext);
 
         $filename = basename($fullFilePath);
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
         $file_path = trim(str_replace($filename, '', $fullFilePath), '/');
 
         $file_path_thumbnail = 'uploads_thumbnail/'.date('Y-m');
@@ -157,6 +144,7 @@ class CRUDBooster
 
     public static function insert($table, $data = [])
     {
+        $data['id'] = DB::table($table)->max('id') + 1;
         if (! $data['created_at']) {
             if (Schema::hasColumn($table, 'created_at')) {
                 $data['created_at'] = date('Y-m-d H:i:s');
@@ -379,15 +367,12 @@ class CRUDBooster
     public static function getCurrentModule()
     {
         $modulepath = self::getModulePath();
-
         if (Cache::has('moduls_'.$modulepath)) {
             return Cache::get('moduls_'.$modulepath);
         } else {
-
             $module = DB::table('cms_moduls')->where('path', self::getModulePath())->first();
 
-            //supply modulpath instead of $module incase where user decides to create form and custom url that does not exist in cms_moduls table.
-            return ($module)?:$modulepath;
+            return $module;
         }
     }
 
@@ -517,35 +502,22 @@ class CRUDBooster
     public static function deleteConfirm($redirectTo)
     {
         echo "swal({   
-				title: \"".cbLang('delete_title_confirm')."\",   
-				text: \"".cbLang('delete_description_confirm')."\",   
+				title: \"".trans('crudbooster.delete_title_confirm')."\",   
+				text: \"".trans('crudbooster.delete_description_confirm')."\",   
 				type: \"warning\",   
 				showCancelButton: true,   
 				confirmButtonColor: \"#ff0000\",   
-				confirmButtonText: \"".cbLang('confirmation_yes')."\",  
-				cancelButtonText: \"".cbLang('confirmation_no')."\",  
+				confirmButtonText: \"".trans('crudbooster.confirmation_yes')."\",  
+				cancelButtonText: \"".trans('crudbooster.confirmation_no')."\",  
 				closeOnConfirm: false }, 
 				function(){  location.href=\"$redirectTo\" });";
     }
 
-    public static function getModulePath()
+    private static function getModulePath()
     {
-        // Check to position of admin_path
-        if(config("crudbooster.ADMIN_PATH")) {
-            $adminPathSegments = explode('/', Request::path());
-            $no = 1;
-            foreach($adminPathSegments as $path) {
-                if($path == config("crudbooster.ADMIN_PATH")) {
-                    $segment = $no+1;
-                    break;
-                }
-                $no++;
-            }
-        } else {
-            $segment = 1;
-        }
+        $adminPathSegments = count(explode('/', config('crudbooster.ADMIN_PATH')));
 
-        return Request::segment($segment);
+        return Request::segment(1 + $adminPathSegments);
     }
 
     public static function mainpath($path = null)
@@ -915,44 +887,30 @@ class CRUDBooster
         return self::findPrimaryKey($table);
     }
 
-//     public static function findPrimaryKey($table)
-//     {
-//         if (! $table) {
-//             return 'id';
-//         }
-
-//         if (self::getCache('table_'.$table, 'primary_key')) {
-//             return self::getCache('table_'.$table, 'primary_key');
-//         }
-//         $table = CRUDBooster::parseSqlTable($table);
-
-//         if (! $table['table']) {
-//             throw new \Exception("parseSqlTable can't determine the table");
-//         }
-//         $query = config('database.connections.'.config('database.default').'.driver') == 'pgsql' ? "select * from information_schema.key_column_usage WHERE TABLE_NAME = '$table[table]'" : "select * from information_schema.COLUMNS where TABLE_SCHEMA = '$table[database]' and TABLE_NAME = '$table[table]' and COLUMN_KEY = 'PRI'";
-//         $keys = DB::select($query);
-//         $primary_key = $keys[0]->COLUMN_NAME;
-//         if ($primary_key) {
-//             self::putCache('table_'.$table, 'primary_key', $primary_key);
-
-//             return $primary_key;
-//         } else {
-//             return 'id';
-//         }
-//     }
-
     public static function findPrimaryKey($table)
     {
-        if(!$table)
-        {
+        if (! $table) {
             return 'id';
         }
 
-        $pk = DB::getDoctrineSchemaManager()->listTableDetails($table)->getPrimaryKey();
-        if(!$pk) {
-            return null;
+        if (self::getCache('table_'.$table, 'primary_key')) {
+            return self::getCache('table_'.$table, 'primary_key');
         }
-        return $pk->getColumns()[0];
+        $table = CRUDBooster::parseSqlTable($table);
+
+        if (! $table['table']) {
+            throw new \Exception("parseSqlTable can't determine the table");
+        }
+        $query = config('database.connections.'.config('database.default').'.driver') == 'pgsql' ? "select * from information_schema.key_column_usage WHERE TABLE_NAME = '$table[table]'" : "select * from information_schema.COLUMNS where TABLE_SCHEMA = '$table[database]' and TABLE_NAME = '$table[table]' and COLUMN_KEY = 'PRI'";
+        $keys = DB::select($query);
+        $primary_key = $keys[0]->COLUMN_NAME;
+        if ($primary_key) {
+            self::putCache('table_'.$table, 'primary_key', $primary_key);
+
+            return $primary_key;
+        } else {
+            return 'id';
+        }
     }
 
     public static function newId($table)
@@ -1065,17 +1023,15 @@ class CRUDBooster
 
     public static function insertLog($description, $details = '')
     {
-        if (CRUDBooster::getSetting('api_debug_mode')) {
-            $a = [];
-            $a['created_at'] = date('Y-m-d H:i:s');
-            $a['ipaddress'] = $_SERVER['REMOTE_ADDR'];
-            $a['useragent'] = $_SERVER['HTTP_USER_AGENT'];
-            $a['url'] = Request::url();
-            $a['description'] = $description;
-            $a['details'] = $details;
-            $a['id_cms_users'] = self::myId();
-            DB::table('cms_logs')->insert($a);
-        }
+        $a = [];
+        $a['created_at'] = date('Y-m-d H:i:s');
+        $a['ipaddress'] = $_SERVER['REMOTE_ADDR'];
+        $a['useragent'] = $_SERVER['HTTP_USER_AGENT'];
+        $a['url'] = Request::url();
+        $a['description'] = $description;
+        $a['details'] = $details;
+        $a['id_cms_users'] = self::myId();
+        DB::table('cms_logs')->insert($a);
     }
 
     public static function referer()
@@ -1139,9 +1095,10 @@ class CRUDBooster
 
     public static function authAPI()
     {
+
         $allowedUserAgent = config('crudbooster.API_USER_AGENT_ALLOWED');
         $user_agent = Request::header('User-Agent');
-        $authorization = Request::header('Authorization');
+        $time = Request::header('X-Authorization-Time');
 
         if ($allowedUserAgent && count($allowedUserAgent)) {
             $userAgentValid = false;
@@ -1152,22 +1109,72 @@ class CRUDBooster
                 }
             }
             if ($userAgentValid == false) {
-                $result['api_status'] = 0;
+                $result['api_status'] = false;
                 $result['api_message'] = "THE DEVICE AGENT IS INVALID";
-                $res = response()->json($result, 400);
+                $res = response()->json($result, 200);
                 $res->send();
                 exit;
             }
         }
 
-        $accessToken = ltrim($authorization,"Bearer ");
-        $accessTokenData = Cache::get("api_token_".$accessToken);
-        if(!$accessTokenData) {
-            response()->json([
-                'api_status'=> 0,
-                'api_message'=> 'Forbidden Access!'
-            ], 403)->send();
-            exit;
+        if (self::getSetting('api_debug_mode') == 'false') {
+
+            $result = [];
+            $validator = Validator::make([
+
+                'X-Authorization-Token' => Request::header('X-Authorization-Token'),
+                'X-Authorization-Time' => Request::header('X-Authorization-Time'),
+                'useragent' => Request::header('User-Agent'),
+            ], [
+
+                    'X-Authorization-Token' => 'required',
+                    'X-Authorization-Time' => 'required',
+                    'useragent' => 'required',
+                ]);
+
+            if ($validator->fails()) {
+                $message = $validator->errors()->all();
+                $result['api_status'] = 0;
+                $result['api_message'] = implode(', ', $message);
+                $res = response()->json($result, 200);
+                $res->send();
+                exit;
+            }
+
+            $keys = DB::table('cms_apikey')->where('status', 'active')->pluck('screetkey');
+            $server_token = [];
+            $server_token_screet = [];
+            foreach ($keys as $key) {
+                $server_token[] = md5($key.$time.$user_agent);
+                $server_token_screet[] = $key;
+            }
+
+            $sender_token = Request::header('X-Authorization-Token');
+
+            if (! Cache::has($sender_token)) {
+                if (! in_array($sender_token, $server_token)) {
+                    $result['api_status'] = false;
+                    $result['api_message'] = "THE TOKEN IS NOT MATCH WITH SERVER TOKEN";
+                    $res = response()->json($result, 200);
+                    $res->send();
+                    exit;
+                }
+            } else {
+                if (Cache::get($sender_token) != $user_agent) {
+                    $result['api_status'] = false;
+                    $result['api_message'] = "THE TOKEN IS ALREADY BUT NOT MATCH WITH YOUR DEVICE";
+                    $res = response()->json($result, 200);
+                    $res->send();
+                    exit;
+                }
+            }
+
+            $id = array_search($sender_token, $server_token);
+            $server_screet = $server_token_screet[$id];
+            DB::table('cms_apikey')->where('screetkey', $server_screet)->increment('hit');
+
+            $expired_token = date('Y-m-d H:i:s', strtotime('+5 seconds'));
+            Cache::put($sender_token, $user_agent, $expired_token);
         }
     }
 
@@ -1529,12 +1536,12 @@ class CRUDBooster
             if (in_array($field, $password_candidate)) {
                 $type = 'password';
                 $validation = ['min:3', 'max:32'];
-                $attribute['help'] = cbLang("text_default_help_password");
+                $attribute['help'] = trans("crudbooster.text_default_help_password");
             }
 
             if (in_array($field, $image_candidate)) {
                 $type = 'upload';
-                $attribute['help'] = cbLang('text_default_help_upload');
+                $attribute['help'] = trans('crudbooster.text_default_help_upload');
                 $validation = ['required|image|max:3000'];
             }
 
@@ -1548,23 +1555,23 @@ class CRUDBooster
             if (in_array($field, $phone_candidate)) {
                 $type = 'number';
                 $validation = ['required', 'numeric'];
-                $attribute['placeholder'] = cbLang('text_default_help_number');
+                $attribute['placeholder'] = trans('crudbooster.text_default_help_number');
             }
 
             if (in_array($field, $email_candidate)) {
                 $type = 'email';
                 $validation[] = 'email|unique:'.$table;
-                $attribute['placeholder'] = cbLang('text_default_help_email');
+                $attribute['placeholder'] = trans('crudbooster.text_default_help_email');
             }
 
             if ($type == 'text' && in_array($field, $name_candidate)) {
-                $attribute['placeholder'] = cbLang('text_default_help_text');
+                $attribute['placeholder'] = trans('crudbooster.text_default_help_text');
                 $validation = ['required', 'string', 'min:3', 'max:70'];
             }
 
             if ($type == 'text' && in_array($field, $url_candidate)) {
                 $validation = ['required', 'url'];
-                $attribute['placeholder'] = cbLang('text_default_help_url');
+                $attribute['placeholder'] = trans('crudbooster.text_default_help_url');
             }
 
             $validation = implode('|', $validation);

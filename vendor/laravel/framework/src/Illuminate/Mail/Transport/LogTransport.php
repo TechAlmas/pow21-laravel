@@ -28,8 +28,6 @@ class LogTransport extends Transport
 
     /**
      * {@inheritdoc}
-     *
-     * @return int
      */
     public function send(Swift_Mime_SimpleMessage $message, &$failedRecipients = null)
     {
@@ -45,7 +43,7 @@ class LogTransport extends Transport
     /**
      * Get a loggable string out of a Swiftmailer entity.
      *
-     * @param  \Swift_Mime_SimpleMimeEntity  $entity
+     * @param  \Swift_Mime_SimpleMimeEntity $entity
      * @return string
      */
     protected function getMimeEntityString(Swift_Mime_SimpleMimeEntity $entity)
@@ -57,15 +55,5 @@ class LogTransport extends Transport
         }
 
         return $string;
-    }
-
-    /**
-     * Get the logger for the LogTransport instance.
-     *
-     * @return \Psr\Log\LoggerInterface
-     */
-    public function logger()
-    {
-        return $this->logger;
     }
 }

@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2022 Justin Hileman
+ * (c) 2012-2018 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -11,11 +11,14 @@
 
 namespace Psy\Command;
 
+use JakubOnderka\PhpConsoleHighlighter\Highlighter;
+use Psy\Configuration;
+use Psy\ConsoleColorFactory;
 use Psy\Exception\RuntimeException;
-use Psy\Exception\UnexpectedTargetException;
 use Psy\Formatter\CodeFormatter;
 use Psy\Formatter\SignatureFormatter;
 use Psy\Input\CodeArgument;
+use Psy\Output\ShellOutput;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -26,14 +29,18 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 class ShowCommand extends ReflectingCommand
 {
+    private $colorMode;
+    private $highlighter;
     private $lastException;
     private $lastExceptionIndex;
 
     /**
-     * @param string|null $colorMode (deprecated and ignored)
+     * @param null|string $colorMode (default: null)
      */
     public function __construct($colorMode = null)
     {
+        $this->colorMode = $colorMode ?: Configuration::COLOR_MODE_AUTO;
+
         parent::__construct();
     }
 
@@ -46,7 +53,7 @@ class ShowCommand extends ReflectingCommand
             ->setName('show')
             ->setDefinition([
                 new CodeArgument('target', CodeArgument::OPTIONAL, 'Function, class, instance, constant, method or property to show.'),
-                new InputOption('ex', null, InputOption::VALUE_OPTIONAL, 'Show last exception context. Optionally specify a stack index.', 1),
+                new InputOption('ex', null,  InputOption::VALUE_OPTIONAL, 'Show last exception context. Optionally specify a stack index.', 1),
             ])
             ->setDescription('Show the code for an object, class, constant, method or property.')
             ->setHelp(
@@ -92,15 +99,11 @@ HELP
                 throw new \InvalidArgumentException('Too many arguments (supply either "target" or "--ex")');
             }
 
-            $this->writeExceptionContext($input, $output);
-
-            return 0;
+            return $this->writeExceptionContext($input, $output);
         }
 
         if ($input->getArgument('target')) {
-            $this->writeCodeContext($input, $output);
-
-            return 0;
+            return $this->writeCodeContext($input, $output);
         }
 
         throw new RuntimeException('Not enough arguments (missing: "target")');
@@ -108,33 +111,13 @@ HELP
 
     private function writeCodeContext(InputInterface $input, OutputInterface $output)
     {
-        try {
-            list($target, $reflector) = $this->getTargetAndReflector($input->getArgument('target'));
-        } catch (UnexpectedTargetException $e) {
-            // If we didn't get a target and Reflector, maybe we got a filename?
-            $target = $e->getTarget();
-            if (\is_string($target) && \is_file($target) && $code = @\file_get_contents($target)) {
-                $file = \realpath($target);
-                if ($file !== $this->context->get('__file')) {
-                    $this->context->setCommandScopeVariables([
-                        '__file' => $file,
-                        '__dir'  => \dirname($file),
-                    ]);
-                }
-
-                $output->page(CodeFormatter::formatCode($code));
-
-                return;
-            } else {
-                throw $e;
-            }
-        }
+        list($target, $reflector) = $this->getTargetAndReflector($input->getArgument('target'));
 
         // Set some magic local variables
         $this->setCommandScopeVariables($reflector);
 
         try {
-            $output->page(CodeFormatter::format($reflector));
+            $output->page(CodeFormatter::format($reflector, $this->colorMode), ShellOutput::OUTPUT_RAW);
         } catch (RuntimeException $e) {
             $output->writeln(SignatureFormatter::format($reflector));
             throw $e;
@@ -157,16 +140,16 @@ HELP
                 $index = 0;
             }
         } else {
-            $index = \max(0, (int) $input->getOption('ex') - 1);
+            $index = max(0, intval($input->getOption('ex')) - 1);
         }
 
         $trace = $exception->getTrace();
-        \array_unshift($trace, [
+        array_unshift($trace, [
             'file' => $exception->getFile(),
             'line' => $exception->getLine(),
         ]);
 
-        if ($index >= \count($trace)) {
+        if ($index >= count($trace)) {
             $index = 0;
         }
 
@@ -186,25 +169,25 @@ HELP
         $file = isset($trace[$index]['file']) ? $this->replaceCwd($trace[$index]['file']) : 'n/a';
         $line = isset($trace[$index]['line']) ? $trace[$index]['line'] : 'n/a';
 
-        $output->writeln(\sprintf(
-            'From <info>%s:%d</info> at <strong>level %d</strong> of backtrace (of %d):',
+        $output->writeln(sprintf(
+            'From <info>%s:%d</info> at <strong>level %d</strong> of backtrace (of %d).',
             OutputFormatter::escape($file),
             OutputFormatter::escape($line),
             $index + 1,
-            \count($trace)
+            count($trace)
         ));
     }
 
-    private function replaceCwd(string $file): string
+    private function replaceCwd($file)
     {
-        if ($cwd = \getcwd()) {
-            $cwd = \rtrim($cwd, \DIRECTORY_SEPARATOR).\DIRECTORY_SEPARATOR;
+        if ($cwd = getcwd()) {
+            $cwd = rtrim($cwd, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         }
 
         if ($cwd === false) {
             return $file;
         } else {
-            return \preg_replace('/^'.\preg_quote($cwd, '/').'/', '', $file);
+            return preg_replace('/^' . preg_quote($cwd, '/') . '/', '', $file);
         }
     }
 
@@ -225,18 +208,25 @@ HELP
             $line = $trace[$index]['line'];
         }
 
-        if (\is_file($file)) {
-            $code = @\file_get_contents($file);
+        if (is_file($file)) {
+            $code = @file_get_contents($file);
         }
 
         if (empty($code)) {
             return;
         }
 
-        $startLine = \max($line - 5, 0);
-        $endLine = $line + 5;
+        $output->write($this->getHighlighter()->getCodeSnippet($code, $line, 5, 5), ShellOutput::OUTPUT_RAW);
+    }
 
-        $output->write(CodeFormatter::formatCode($code, $startLine, $endLine, $line), false);
+    private function getHighlighter()
+    {
+        if (!$this->highlighter) {
+            $factory = new ConsoleColorFactory($this->colorMode);
+            $this->highlighter = new Highlighter($factory->getConsoleColor());
+        }
+
+        return $this->highlighter;
     }
 
     private function setCommandScopeVariablesFromContext(array $context)
@@ -254,7 +244,7 @@ HELP
                 if ($namespace = $refl->getNamespaceName()) {
                     $vars['__namespace'] = $namespace;
                 }
-            } catch (\Throwable $e) {
+            } catch (\Exception $e) {
                 // oh well
             }
         } elseif (isset($context['function'])) {
@@ -265,7 +255,7 @@ HELP
                 if ($namespace = $refl->getNamespaceName()) {
                     $vars['__namespace'] = $namespace;
                 }
-            } catch (\Throwable $e) {
+            } catch (\Exception $e) {
                 // oh well
             }
         }
@@ -278,21 +268,21 @@ HELP
                 $line = $context['line'];
             }
 
-            if (\is_file($file)) {
+            if (is_file($file)) {
                 $vars['__file'] = $file;
                 if (isset($line)) {
                     $vars['__line'] = $line;
                 }
-                $vars['__dir'] = \dirname($file);
+                $vars['__dir'] = dirname($file);
             }
         }
 
         $this->context->setCommandScopeVariables($vars);
     }
 
-    private function extractEvalFileAndLine(string $file)
+    private function extractEvalFileAndLine($file)
     {
-        if (\preg_match('/(.*)\\((\\d+)\\) : eval\\(\\)\'d code$/', $file, $matches)) {
+        if (preg_match('/(.*)\\((\\d+)\\) : eval\\(\\)\'d code$/', $file, $matches)) {
             return [$matches[1], $matches[2]];
         }
     }

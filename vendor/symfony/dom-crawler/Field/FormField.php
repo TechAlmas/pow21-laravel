@@ -79,7 +79,7 @@ abstract class FormField
     /**
      * Returns the name of the field.
      *
-     * @return string
+     * @return string The name of the field
      */
     public function getName()
     {
@@ -89,7 +89,7 @@ abstract class FormField
     /**
      * Gets the value of the field.
      *
-     * @return string|array|null
+     * @return string|array The value of the field
      */
     public function getValue()
     {
@@ -98,16 +98,18 @@ abstract class FormField
 
     /**
      * Sets the value of the field.
+     *
+     * @param string $value The value of the field
      */
-    public function setValue(?string $value)
+    public function setValue($value)
     {
-        $this->value = $value ?? '';
+        $this->value = (string) $value;
     }
 
     /**
      * Returns true if the field should be included in the submitted values.
      *
-     * @return bool
+     * @return bool true if the field should be included in the submitted values, false otherwise
      */
     public function hasValue()
     {

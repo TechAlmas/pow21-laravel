@@ -3,12 +3,9 @@
 namespace Illuminate\Http\Resources;
 
 use Exception;
-use Illuminate\Support\Traits\ForwardsCalls;
 
 trait DelegatesToResource
 {
-    use ForwardsCalls;
-
     /**
      * Get the value of the resource's route key.
      *
@@ -33,27 +30,10 @@ trait DelegatesToResource
      * Retrieve the model for a bound value.
      *
      * @param  mixed  $value
-     * @param  string|null  $field
      * @return void
-     *
      * @throws \Exception
      */
-    public function resolveRouteBinding($value, $field = null)
-    {
-        throw new Exception('Resources may not be implicitly resolved from route bindings.');
-    }
-
-    /**
-     * Retrieve the model for a bound value.
-     *
-     * @param  string  $childType
-     * @param  mixed  $value
-     * @param  string|null  $field
-     * @return void
-     *
-     * @throws \Exception
-     */
-    public function resolveChildRouteBinding($childType, $value, $field = null)
+    public function resolveRouteBinding($value)
     {
         throw new Exception('Resources may not be implicitly resolved from route bindings.');
     }
@@ -64,10 +44,9 @@ trait DelegatesToResource
      * @param  mixed  $offset
      * @return bool
      */
-    #[\ReturnTypeWillChange]
     public function offsetExists($offset)
     {
-        return isset($this->resource[$offset]);
+        return array_key_exists($offset, $this->resource);
     }
 
     /**
@@ -76,7 +55,6 @@ trait DelegatesToResource
      * @param  mixed  $offset
      * @return mixed
      */
-    #[\ReturnTypeWillChange]
     public function offsetGet($offset)
     {
         return $this->resource[$offset];
@@ -89,7 +67,6 @@ trait DelegatesToResource
      * @param  mixed  $value
      * @return void
      */
-    #[\ReturnTypeWillChange]
     public function offsetSet($offset, $value)
     {
         $this->resource[$offset] = $value;
@@ -101,7 +78,6 @@ trait DelegatesToResource
      * @param  mixed  $offset
      * @return void
      */
-    #[\ReturnTypeWillChange]
     public function offsetUnset($offset)
     {
         unset($this->resource[$offset]);
@@ -149,6 +125,6 @@ trait DelegatesToResource
      */
     public function __call($method, $parameters)
     {
-        return $this->forwardCallTo($this->resource, $method, $parameters);
+        return $this->resource->{$method}(...$parameters);
     }
 }

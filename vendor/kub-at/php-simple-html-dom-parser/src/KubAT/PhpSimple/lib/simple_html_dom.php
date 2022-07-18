@@ -20,7 +20,7 @@ namespace simple_html_dom;
  *   Vadim Voituk
  *   Antcs
  *
- * Version Rev. 1.9.1 (291)
+ * Version Rev. 1.9 (290)
  */
 
 define('HDOM_TYPE_ELEMENT', 1);
@@ -609,13 +609,6 @@ class simple_html_dom_node
 			// Skip root nodes
 			if(!$node->parent) {
 				$pass = false;
-			}
-
-			// Handle 'text' selector
-			if($pass && $tag === 'text' && $node->tag === 'text') {
-				$ret[array_search($node, $this->dom->nodes, true)] = 1;
-				unset($node);
-				continue;
 			}
 
 			// Skip if node isn't a child node (i.e. text nodes)

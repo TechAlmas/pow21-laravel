@@ -17,62 +17,60 @@ use Symfony\Component\VarDumper\Cloner\Stub;
  * Casts PDO related classes to array representation.
  *
  * @author Nicolas Grekas <p@tchwork.com>
- *
- * @final
  */
 class PdoCaster
 {
-    private const PDO_ATTRIBUTES = [
-        'CASE' => [
+    private static $pdoAttributes = array(
+        'CASE' => array(
             \PDO::CASE_LOWER => 'LOWER',
             \PDO::CASE_NATURAL => 'NATURAL',
             \PDO::CASE_UPPER => 'UPPER',
-        ],
-        'ERRMODE' => [
+        ),
+        'ERRMODE' => array(
             \PDO::ERRMODE_SILENT => 'SILENT',
             \PDO::ERRMODE_WARNING => 'WARNING',
             \PDO::ERRMODE_EXCEPTION => 'EXCEPTION',
-        ],
+        ),
         'TIMEOUT',
         'PREFETCH',
         'AUTOCOMMIT',
         'PERSISTENT',
         'DRIVER_NAME',
         'SERVER_INFO',
-        'ORACLE_NULLS' => [
+        'ORACLE_NULLS' => array(
             \PDO::NULL_NATURAL => 'NATURAL',
             \PDO::NULL_EMPTY_STRING => 'EMPTY_STRING',
             \PDO::NULL_TO_STRING => 'TO_STRING',
-        ],
+        ),
         'CLIENT_VERSION',
         'SERVER_VERSION',
         'STATEMENT_CLASS',
         'EMULATE_PREPARES',
         'CONNECTION_STATUS',
         'STRINGIFY_FETCHES',
-        'DEFAULT_FETCH_MODE' => [
+        'DEFAULT_FETCH_MODE' => array(
             \PDO::FETCH_ASSOC => 'ASSOC',
             \PDO::FETCH_BOTH => 'BOTH',
             \PDO::FETCH_LAZY => 'LAZY',
             \PDO::FETCH_NUM => 'NUM',
             \PDO::FETCH_OBJ => 'OBJ',
-        ],
-    ];
+        ),
+    );
 
-    public static function castPdo(\PDO $c, array $a, Stub $stub, bool $isNested)
+    public static function castPdo(\PDO $c, array $a, Stub $stub, $isNested)
     {
-        $attr = [];
+        $attr = array();
         $errmode = $c->getAttribute(\PDO::ATTR_ERRMODE);
         $c->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 
-        foreach (self::PDO_ATTRIBUTES as $k => $v) {
+        foreach (self::$pdoAttributes as $k => $v) {
             if (!isset($k[0])) {
                 $k = $v;
-                $v = [];
+                $v = array();
             }
 
             try {
-                $attr[$k] = 'ERRMODE' === $k ? $errmode : $c->getAttribute(\constant('PDO::ATTR_'.$k));
+                $attr[$k] = 'ERRMODE' === $k ? $errmode : $c->getAttribute(constant('PDO::ATTR_'.$k));
                 if ($v && isset($v[$attr[$k]])) {
                     $attr[$k] = new ConstStub($v[$attr[$k]], $attr[$k]);
                 }
@@ -87,11 +85,11 @@ class PdoCaster
         }
 
         $prefix = Caster::PREFIX_VIRTUAL;
-        $a += [
+        $a += array(
             $prefix.'inTransaction' => method_exists($c, 'inTransaction'),
             $prefix.'errorInfo' => $c->errorInfo(),
             $prefix.'attributes' => new EnumStub($attr),
-        ];
+        );
 
         if ($a[$prefix.'inTransaction']) {
             $a[$prefix.'inTransaction'] = $c->inTransaction();
@@ -108,7 +106,7 @@ class PdoCaster
         return $a;
     }
 
-    public static function castPdoStatement(\PDOStatement $c, array $a, Stub $stub, bool $isNested)
+    public static function castPdoStatement(\PDOStatement $c, array $a, Stub $stub, $isNested)
     {
         $prefix = Caster::PREFIX_VIRTUAL;
         $a[$prefix.'errorInfo'] = $c->errorInfo();

@@ -15,17 +15,16 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Stopwatch\Stopwatch;
-use Symfony\Component\Stopwatch\StopwatchEvent;
 
 /**
- * @author Fabien Potencier <fabien@symfony.com>
+ * TimeDataCollector.
  *
- * @final
+ * @author Fabien Potencier <fabien@symfony.com>
  */
 class TimeDataCollector extends DataCollector implements LateDataCollectorInterface
 {
-    private $kernel;
-    private $stopwatch;
+    protected $kernel;
+    protected $stopwatch;
 
     public function __construct(KernelInterface $kernel = null, Stopwatch $stopwatch = null)
     {
@@ -36,7 +35,7 @@ class TimeDataCollector extends DataCollector implements LateDataCollectorInterf
     /**
      * {@inheritdoc}
      */
-    public function collect(Request $request, Response $response, \Throwable $exception = null)
+    public function collect(Request $request, Response $response, \Exception $exception = null)
     {
         if (null !== $this->kernel) {
             $startTime = $this->kernel->getStartTime();
@@ -44,12 +43,11 @@ class TimeDataCollector extends DataCollector implements LateDataCollectorInterf
             $startTime = $request->server->get('REQUEST_TIME_FLOAT');
         }
 
-        $this->data = [
-            'token' => $request->attributes->get('_stopwatch_token'),
+        $this->data = array(
+            'token' => $response->headers->get('X-Debug-Token'),
             'start_time' => $startTime * 1000,
-            'events' => [],
-            'stopwatch_installed' => class_exists(Stopwatch::class, false),
-        ];
+            'events' => array(),
+        );
     }
 
     /**
@@ -57,7 +55,7 @@ class TimeDataCollector extends DataCollector implements LateDataCollectorInterf
      */
     public function reset()
     {
-        $this->data = [];
+        $this->data = array();
 
         if (null !== $this->stopwatch) {
             $this->stopwatch->reset();
@@ -76,7 +74,9 @@ class TimeDataCollector extends DataCollector implements LateDataCollectorInterf
     }
 
     /**
-     * @param StopwatchEvent[] $events The request events
+     * Sets the request events.
+     *
+     * @param array $events The request events
      */
     public function setEvents(array $events)
     {
@@ -88,17 +88,21 @@ class TimeDataCollector extends DataCollector implements LateDataCollectorInterf
     }
 
     /**
-     * @return StopwatchEvent[]
+     * Gets the request events.
+     *
+     * @return array The request events
      */
-    public function getEvents(): array
+    public function getEvents()
     {
         return $this->data['events'];
     }
 
     /**
      * Gets the request elapsed time.
+     *
+     * @return float The elapsed time
      */
-    public function getDuration(): float
+    public function getDuration()
     {
         if (!isset($this->data['events']['__section__'])) {
             return 0;
@@ -113,8 +117,10 @@ class TimeDataCollector extends DataCollector implements LateDataCollectorInterf
      * Gets the initialization time.
      *
      * This is the time spent until the beginning of the request handling.
+     *
+     * @return float The elapsed time
      */
-    public function getInitTime(): float
+    public function getInitTime()
     {
         if (!isset($this->data['events']['__section__'])) {
             return 0;
@@ -123,20 +129,20 @@ class TimeDataCollector extends DataCollector implements LateDataCollectorInterf
         return $this->data['events']['__section__']->getOrigin() - $this->getStartTime();
     }
 
-    public function getStartTime(): float
+    /**
+     * Gets the request time.
+     *
+     * @return int The time
+     */
+    public function getStartTime()
     {
         return $this->data['start_time'];
-    }
-
-    public function isStopwatchInstalled(): bool
-    {
-        return $this->data['stopwatch_installed'];
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getName(): string
+    public function getName()
     {
         return 'time';
     }

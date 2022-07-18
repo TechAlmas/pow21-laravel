@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2022 Justin Hileman
+ * (c) 2012-2018 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -21,7 +21,7 @@ class Context
 {
     private static $specialNames = ['_', '_e', '__out', '__psysh__', 'this'];
 
-    // Include a very limited number of command-scope magic variable names.
+    // Whitelist a very limited number of command-scope magic variable names.
     // This might be a bad idea, but future me can sort it out.
     private static $commandScopeNames = [
         '__function', '__method', '__class', '__namespace', '__file', '__line', '__dir',
@@ -38,13 +38,13 @@ class Context
     /**
      * Get a context variable.
      *
-     * @throws \InvalidArgumentException If the variable is not found in the current context
+     * @throws InvalidArgumentException If the variable is not found in the current context
      *
      * @param string $name
      *
      * @return mixed
      */
-    public function get(string $name)
+    public function get($name)
     {
         switch ($name) {
             case '_':
@@ -75,19 +75,19 @@ class Context
             case '__file':
             case '__line':
             case '__dir':
-                if (\array_key_exists($name, $this->commandScopeVariables)) {
+                if (array_key_exists($name, $this->commandScopeVariables)) {
                     return $this->commandScopeVariables[$name];
                 }
                 break;
 
             default:
-                if (\array_key_exists($name, $this->scopeVariables)) {
+                if (array_key_exists($name, $this->scopeVariables)) {
                     return $this->scopeVariables[$name];
                 }
                 break;
         }
 
-        throw new \InvalidArgumentException('Unknown variable: $'.$name);
+        throw new \InvalidArgumentException('Unknown variable: $' . $name);
     }
 
     /**
@@ -95,9 +95,9 @@ class Context
      *
      * @return array
      */
-    public function getAll(): array
+    public function getAll()
     {
-        return \array_merge($this->scopeVariables, $this->getSpecialVariables());
+        return array_merge($this->scopeVariables, $this->getSpecialVariables());
     }
 
     /**
@@ -105,7 +105,7 @@ class Context
      *
      * @return array
      */
-    public function getSpecialVariables(): array
+    public function getSpecialVariables()
     {
         $vars = [
             '_' => $this->returnValue,
@@ -123,7 +123,7 @@ class Context
             $vars['this'] = $this->boundObject;
         }
 
-        return \array_merge($vars, $this->commandScopeVariables);
+        return array_merge($vars, $this->commandScopeVariables);
     }
 
     /**
@@ -182,7 +182,7 @@ class Context
      *
      * @throws \InvalidArgumentException If no Exception has been caught
      *
-     * @return \Exception|null
+     * @return null|\Exception
      */
     public function getLastException()
     {
@@ -198,7 +198,7 @@ class Context
      *
      * @param string $lastStdout
      */
-    public function setLastStdout(string $lastStdout)
+    public function setLastStdout($lastStdout)
     {
         $this->lastStdout = $lastStdout;
     }
@@ -208,7 +208,7 @@ class Context
      *
      * @throws \InvalidArgumentException If no output has happened yet
      *
-     * @return string|null
+     * @return null|string
      */
     public function getLastStdout()
     {
@@ -228,7 +228,7 @@ class Context
      */
     public function setBoundObject($boundObject)
     {
-        $this->boundObject = \is_object($boundObject) ? $boundObject : null;
+        $this->boundObject = is_object($boundObject) ? $boundObject : null;
         $this->boundClass = null;
     }
 
@@ -251,7 +251,7 @@ class Context
      */
     public function setBoundClass($boundClass)
     {
-        $this->boundClass = (\is_string($boundClass) && $boundClass !== '') ? $boundClass : null;
+        $this->boundClass = (is_string($boundClass) && $boundClass !== '') ? $boundClass : null;
         $this->boundObject = null;
     }
 
@@ -275,7 +275,7 @@ class Context
         $vars = [];
         foreach ($commandScopeVariables as $key => $value) {
             // kind of type check
-            if (\is_scalar($value) && \in_array($key, self::$commandScopeNames)) {
+            if (is_scalar($value) && in_array($key, self::$commandScopeNames)) {
                 $vars[$key] = $value;
             }
         }
@@ -288,7 +288,7 @@ class Context
      *
      * @return array
      */
-    public function getCommandScopeVariables(): array
+    public function getCommandScopeVariables()
     {
         return $this->commandScopeVariables;
     }
@@ -301,9 +301,9 @@ class Context
      *
      * @return array Array of unused variable names
      */
-    public function getUnusedCommandScopeVariableNames(): array
+    public function getUnusedCommandScopeVariableNames()
     {
-        return \array_diff(self::$commandScopeNames, \array_keys($this->commandScopeVariables));
+        return array_diff(self::$commandScopeNames, array_keys($this->commandScopeVariables));
     }
 
     /**
@@ -313,8 +313,8 @@ class Context
      *
      * @return bool
      */
-    public static function isSpecialVariableName(string $name): bool
+    public static function isSpecialVariableName($name)
     {
-        return \in_array($name, self::$specialNames) || \in_array($name, self::$commandScopeNames);
+        return in_array($name, self::$specialNames) || in_array($name, self::$commandScopeNames);
     }
 }

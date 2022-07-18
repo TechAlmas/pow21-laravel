@@ -8,26 +8,15 @@ use Illuminate\Support\Facades\Validator;
 
 class ApiController extends Controller
 {
-    public $method_type;
-    public $permalink;
+    var $method_type;
 
-    private $hook_api_status;
-    private $hook_api_message;
-    private $last_id_tmp = [];
+    var $permalink;
 
-    private $limit = null;
-    private $output = null;
+    var $hook_api_status;
 
-    public function setLimit($limit)
-    {
-        $this->limit = $limit;
-        return $this;
-    }
+    var $hook_api_message;
 
-    public function output($array)
-    {
-        $this->output = $array;
-    }
+    var $last_id_tmp = [];
 
     public function hook_before(&$postdata)
     {
@@ -54,7 +43,7 @@ class ApiController extends Controller
         $this->hook_api_message = $message;
     }
 
-    public function execute_api($output = 'JSON')
+    public function execute_api()
     {
 
         // DB::enableQueryLog();
@@ -69,19 +58,21 @@ class ApiController extends Controller
         $table = $row_api->tabel;
         $pk = CRUDBooster::pk($table);
 
+        $debug_mode_message = 'You are in debug mode !';
+
         /*
         | ----------------------------------------------
         | Method Type validation
         | ----------------------------------------------
         |
         */
-
         if ($row_api->method_type) {
             $method_type = $row_api->method_type;
             if ($method_type) {
                 if (! Request::isMethod($method_type)) {
                     $result['api_status'] = 0;
                     $result['api_message'] = "The requested method is not allowed!";
+                    $result['api_http'] = 401;
                     goto show;
                 }
             }
@@ -96,7 +87,7 @@ class ApiController extends Controller
         if (! $row_api) {
             $result['api_status'] = 0;
             $result['api_message'] = 'Sorry this API endpoint is no longer available or has been changed. Please make sure endpoint is correct.';
-
+            $result['api_http'] = 401;
             goto show;
         }
 
@@ -109,10 +100,8 @@ class ApiController extends Controller
         | ----------------------------------------------
         |
         */
-
-        $type_except = ['password', 'ref', 'base64_file', 'custom', 'search'];
-
         if ($parameters) {
+            $type_except = ['password', 'ref', 'base64_file', 'custom', 'search'];
             $input_validator = [];
             $data_validation = [];
             foreach ($parameters as $param) {
@@ -125,7 +114,7 @@ class ApiController extends Controller
                 $used = $param['used'];
                 $format_validation = [];
 
-                if ($used && ! $required && $value == '') {
+                if ($used && ! $required && $value == '' && ! in_array($type, ['image', 'file'])) {
                     continue;
                 }
 
@@ -136,8 +125,6 @@ class ApiController extends Controller
                 if ($config && substr($config, 0, 1) == '*') {
                     continue;
                 }
-
-                $input_validator[$name] = trim($value);
 
                 if ($required == '1') {
                     $format_validation[] = 'required';
@@ -171,12 +158,6 @@ class ApiController extends Controller
                     $format_validation[] = 'max:'.$config;
                 } elseif ($type == 'not_in') {
                     $format_validation[] = 'not_in:'.$config;
-                } elseif ($type == 'image') {
-                    $format_validation[] = 'image';
-                    $input_validator[$name] = Request::file($name);
-                } elseif ($type == 'file') {
-                    $format_validation[] = 'file';
-                    $input_validator[$name] = Request::file($name);
                 } else {
                     if (! in_array($type, $type_except)) {
                         $format_validation[] = $type;
@@ -189,6 +170,7 @@ class ApiController extends Controller
                     $format_validation[] = 'exists:'.$table_exist.','.$table_exist_pk;
                 }
 
+                $input_validator[$name] = trim($value);
                 if (count($format_validation)) {
                     $data_validation[$name] = implode('|', $format_validation);
                 }
@@ -200,7 +182,7 @@ class ApiController extends Controller
                 $message = implode(', ', $message);
                 $result['api_status'] = 0;
                 $result['api_message'] = $message;
-
+                $result['api_http'] = 401;
                 goto show;
             }
         }
@@ -213,11 +195,8 @@ class ApiController extends Controller
         }
 
         $this->hook_before($posts);
-        if($this->output) {
-            return response()->json($this->output);
-        }
 
-        $limit = ($this->limit)?:$posts['limit'];
+        $limit = ($posts['limit']) ?: 20;
         $offset = ($posts['offset']) ?: 0;
         $orderby = ($posts['orderby']) ?: $table.'.'.$pk.',desc';
         $uploads_format_candidate = explode(',', config("crudbooster.UPLOAD_TYPES"));
@@ -235,10 +214,7 @@ class ApiController extends Controller
             if ($offset) {
                 $data->skip($offset);
             }
-            if($limit) {
-                $data->take($limit);
-            }
-
+            $data->take($limit);
             foreach ($responses as $resp) {
                 $name = $resp['name'];
                 $type = $resp['type'];
@@ -342,7 +318,7 @@ class ApiController extends Controller
                     $used = $param['used'];
                     $required = $param['required'];
 
-                    if ($type_except && in_array($type, $type_except)) {
+                    if (in_array($type, $type_except)) {
                         continue;
                     }
 
@@ -422,17 +398,23 @@ class ApiController extends Controller
                             }
 
                             if (! in_array($k, $responses_fields)) {
-                                unset($row->$k);
+                                unset($row[$k]);
                             }
                         }
                     }
 
                     $result['api_status'] = 1;
                     $result['api_message'] = 'success';
+                    if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+                        $result['api_authorization'] = $debug_mode_message;
+                    }
                     $result['data'] = $rows;
                 } else {
                     $result['api_status'] = 0;
                     $result['api_message'] = 'There is no data found !';
+                    if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+                        $result['api_authorization'] = $debug_mode_message;
+                    }
                     $result['data'] = [];
                 }
             } elseif ($action_type == 'detail') {
@@ -453,17 +435,23 @@ class ApiController extends Controller
                                 if (! Hash::check($value, $rows->{$name})) {
                                     $result['api_status'] = 0;
                                     $result['api_message'] = 'Invalid credentials. Check your username and password.';
-
+                                    $result['api_http'] = 401;
+                                    if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+                                        $result['api_authorization'] = $debug_mode_message;
+                                    }
                                     goto show;
                                 }
                             }
                         } else {
                             if ($used) {
                                 if ($value) {
-                                    if (! Hash::check($value, $rows->{$name})) {
+                                    if (! Hash::check($value, $row->{$name})) {
                                         $result['api_status'] = 0;
                                         $result['api_message'] = 'Invalid credentials. Check your username and password.';
-
+                                        $result['api_http'] = 401;
+                                        if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+                                            $result['api_authorization'] = $debug_mode_message;
+                                        }
                                         goto show;
                                     }
                                 }
@@ -478,19 +466,23 @@ class ApiController extends Controller
                         }
 
                         if (! in_array($k, $responses_fields)) {
-                            unset($rows->$k);
+                            unset($row[$k]);
                         }
                     }
 
                     $result['api_status'] = 1;
                     $result['api_message'] = 'success';
-
+                    if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+                        $result['api_authorization'] = $debug_mode_message;
+                    }
                     $rows = (array) $rows;
-                    $result['data'] = $rows;
+                    $result = array_merge($result, $rows);
                 } else {
                     $result['api_status'] = 0;
                     $result['api_message'] = 'There is no data found !';
-
+                    if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+                        $result['api_authorization'] = $debug_mode_message;
+                    }
                 }
             } elseif ($action_type == 'delete') {
 
@@ -502,7 +494,9 @@ class ApiController extends Controller
 
                 $result['api_status'] = ($delete) ? 1 : 0;
                 $result['api_message'] = ($delete) ? "success" : "failed";
-
+                if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+                    $result['api_authorization'] = $debug_mode_message;
+                }
             }
         } elseif ($action_type == 'save_add' || $action_type == 'save_edit') {
 
@@ -566,34 +560,23 @@ class ApiController extends Controller
                 }
             }
 
-            $lastId = null;
-
             if ($action_type == 'save_add') {
 
-                DB::beginTransaction();
-                try{
-                    $id = DB::table($table)->insertGetId($row_assign);
-                    DB::commit();
-                }catch (\Exception $e)
-                {
-                    DB::rollBack();
-                    throw new \Exception($e->getMessage());
+                $row_assign['id'] = CRUDBooster::newId($table);
+                DB::table($table)->insert($row_assign);
+                $result['api_status'] = ($row_assign['id']) ? 1 : 0;
+                $result['api_message'] = ($row_assign['id']) ? 'success' : 'failed';
+                if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+
+                    $result['api_authorization'] = $debug_mode_message;
                 }
-
-                $result['api_status'] = ($id) ? 1 : 0;
-                $result['api_message'] = ($id) ? 'success' : 'failed';
-
-                $result['data']['id'] = $id;
-                $lastId = $id;
+                $result['id'] = $row_assign['id'];
             } else {
 
                 try {
                     $pk = CRUDBooster::pk($table);
-
-                    $lastId = $row_assign[$pk];
-
                     $update = DB::table($table);
-                    $update->where($table.'.'.$pk, $row_assign[$pk]);
+                    $update->where($table.'.'.$pk, $row_assign['id']);
 
                     if ($row_api->sql_where) {
                         $update->whereraw($row_api->sql_where);
@@ -604,12 +587,16 @@ class ApiController extends Controller
                     $update = $update->update($row_assign);
                     $result['api_status'] = 1;
                     $result['api_message'] = 'success';
-
+                    if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+                        $result['api_authorization'] = $debug_mode_message;
+                    }
                 } catch (\Exception $e) {
                     $result['api_status'] = 0;
                     $result['api_message'] = 'failed, '.$e;
-
-
+                    $result['api_http'] = 401;
+                    if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+                        $result['api_authorization'] = $debug_mode_message;
+                    }
                 }
             }
 
@@ -632,16 +619,15 @@ class ApiController extends Controller
         show:
         $result['api_status'] = $this->hook_api_status ?: $result['api_status'];
         $result['api_message'] = $this->hook_api_message ?: $result['api_message'];
+        $result['api_http'] = $result['api_http'] === 401 ? $result['api_http'] : 200;
 
+        if (CRUDBooster::getSetting('api_debug_mode') == 'true') {
+            $result['api_authorization'] = $debug_mode_message;
+        }
 
         $this->hook_after($posts, $result);
-        if($this->output) return response()->json($this->output);
 
-        if($output == 'JSON') {
-            return response()->json($result, 200);
-        }else{
-            return $result;
-        }
+        return response()->json($result, 200);
     }
 
     protected function isJSON($theData)
@@ -693,3 +679,7 @@ class ApiController extends Controller
         return $result;
     }
 }
+
+
+
+

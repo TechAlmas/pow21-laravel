@@ -2,14 +2,12 @@
 
 namespace Illuminate\Foundation\Testing\Concerns;
 
-use Illuminate\Contracts\Http\Kernel as HttpKernel;
-use Illuminate\Cookie\CookieValuePrefix;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Testing\LoggedExceptionCollection;
-use Illuminate\Testing\TestResponse;
-use Symfony\Component\HttpFoundation\File\UploadedFile as SymfonyUploadedFile;
+use Illuminate\Http\Request;
+use Illuminate\Foundation\Testing\TestResponse;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
+use Symfony\Component\HttpFoundation\File\UploadedFile as SymfonyUploadedFile;
 
 trait MakesHttpRequests
 {
@@ -19,20 +17,6 @@ trait MakesHttpRequests
      * @var array
      */
     protected $defaultHeaders = [];
-
-    /**
-     * Additional cookies for the request.
-     *
-     * @var array
-     */
-    protected $defaultCookies = [];
-
-    /**
-     * Additional cookies will not be encrypted for the request.
-     *
-     * @var array
-     */
-    protected $unencryptedCookies = [];
 
     /**
      * Additional server variables for the request.
@@ -49,25 +33,9 @@ trait MakesHttpRequests
     protected $followRedirects = false;
 
     /**
-     * Indicates whether cookies should be encrypted.
-     *
-     * @var bool
-     */
-    protected $encryptCookies = true;
-
-    /**
-     * Indicated whether JSON requests should be performed "with credentials" (cookies).
-     *
-     * @see https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials
-     *
-     * @var bool
-     */
-    protected $withCredentials = false;
-
-    /**
      * Define additional headers to be sent with the request.
      *
-     * @param  array  $headers
+     * @param  array $headers
      * @return $this
      */
     public function withHeaders(array $headers)
@@ -80,8 +48,8 @@ trait MakesHttpRequests
     /**
      * Add a header to be sent with the request.
      *
-     * @param  string  $name
-     * @param  string  $value
+     * @param  string $name
+     * @param  string $value
      * @return $this
      */
     public function withHeader(string $name, string $value)
@@ -89,18 +57,6 @@ trait MakesHttpRequests
         $this->defaultHeaders[$name] = $value;
 
         return $this;
-    }
-
-    /**
-     * Add an authorization token for the request.
-     *
-     * @param  string  $token
-     * @param  string  $type
-     * @return $this
-     */
-    public function withToken(string $token, string $type = 'Bearer')
-    {
-        return $this->withHeader('Authorization', $type.' '.$token);
     }
 
     /**
@@ -131,7 +87,7 @@ trait MakesHttpRequests
     /**
      * Disable middleware for the test.
      *
-     * @param  string|array|null  $middleware
+     * @param  string|array  $middleware
      * @return $this
      */
     public function withoutMiddleware($middleware = null)
@@ -143,8 +99,7 @@ trait MakesHttpRequests
         }
 
         foreach ((array) $middleware as $abstract) {
-            $this->app->instance($abstract, new class
-            {
+            $this->app->instance($abstract, new class {
                 public function handle($request, $next)
                 {
                     return $next($request);
@@ -158,7 +113,7 @@ trait MakesHttpRequests
     /**
      * Enable the given middleware for the test.
      *
-     * @param  string|array|null  $middleware
+     * @param  string|array  $middleware
      * @return $this
      */
     public function withMiddleware($middleware = null)
@@ -177,60 +132,6 @@ trait MakesHttpRequests
     }
 
     /**
-     * Define additional cookies to be sent with the request.
-     *
-     * @param  array  $cookies
-     * @return $this
-     */
-    public function withCookies(array $cookies)
-    {
-        $this->defaultCookies = array_merge($this->defaultCookies, $cookies);
-
-        return $this;
-    }
-
-    /**
-     * Add a cookie to be sent with the request.
-     *
-     * @param  string  $name
-     * @param  string  $value
-     * @return $this
-     */
-    public function withCookie(string $name, string $value)
-    {
-        $this->defaultCookies[$name] = $value;
-
-        return $this;
-    }
-
-    /**
-     * Define additional cookies will not be encrypted before sending with the request.
-     *
-     * @param  array  $cookies
-     * @return $this
-     */
-    public function withUnencryptedCookies(array $cookies)
-    {
-        $this->unencryptedCookies = array_merge($this->unencryptedCookies, $cookies);
-
-        return $this;
-    }
-
-    /**
-     * Add a cookie will not be encrypted before sending with the request.
-     *
-     * @param  string  $name
-     * @param  string  $value
-     * @return $this
-     */
-    public function withUnencryptedCookie(string $name, string $value)
-    {
-        $this->unencryptedCookies[$name] = $value;
-
-        return $this;
-    }
-
-    /**
      * Automatically follow any redirects returned from the response.
      *
      * @return $this
@@ -243,39 +144,13 @@ trait MakesHttpRequests
     }
 
     /**
-     * Include cookies and authorization headers for JSON requests.
-     *
-     * @return $this
-     */
-    public function withCredentials()
-    {
-        $this->withCredentials = true;
-
-        return $this;
-    }
-
-    /**
-     * Disable automatic encryption of cookie values.
-     *
-     * @return $this
-     */
-    public function disableCookieEncryption()
-    {
-        $this->encryptCookies = false;
-
-        return $this;
-    }
-
-    /**
-     * Set the referer header and previous URL session value in order to simulate a previous request.
+     * Set the referer header to simulate a previous request.
      *
      * @param  string  $url
      * @return $this
      */
     public function from(string $url)
     {
-        $this->app['session']->setPreviousUrl($url);
-
         return $this->withHeader('referer', $url);
     }
 
@@ -284,14 +159,13 @@ trait MakesHttpRequests
      *
      * @param  string  $uri
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function get($uri, array $headers = [])
     {
         $server = $this->transformHeadersToServerVars($headers);
-        $cookies = $this->prepareCookiesForRequest();
 
-        return $this->call('GET', $uri, [], $cookies, [], $server);
+        return $this->call('GET', $uri, [], [], [], $server);
     }
 
     /**
@@ -299,7 +173,7 @@ trait MakesHttpRequests
      *
      * @param  string  $uri
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function getJson($uri, array $headers = [])
     {
@@ -312,14 +186,13 @@ trait MakesHttpRequests
      * @param  string  $uri
      * @param  array  $data
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function post($uri, array $data = [], array $headers = [])
     {
         $server = $this->transformHeadersToServerVars($headers);
-        $cookies = $this->prepareCookiesForRequest();
 
-        return $this->call('POST', $uri, $data, $cookies, [], $server);
+        return $this->call('POST', $uri, $data, [], [], $server);
     }
 
     /**
@@ -328,7 +201,7 @@ trait MakesHttpRequests
      * @param  string  $uri
      * @param  array  $data
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function postJson($uri, array $data = [], array $headers = [])
     {
@@ -341,14 +214,13 @@ trait MakesHttpRequests
      * @param  string  $uri
      * @param  array  $data
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function put($uri, array $data = [], array $headers = [])
     {
         $server = $this->transformHeadersToServerVars($headers);
-        $cookies = $this->prepareCookiesForRequest();
 
-        return $this->call('PUT', $uri, $data, $cookies, [], $server);
+        return $this->call('PUT', $uri, $data, [], [], $server);
     }
 
     /**
@@ -357,7 +229,7 @@ trait MakesHttpRequests
      * @param  string  $uri
      * @param  array  $data
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function putJson($uri, array $data = [], array $headers = [])
     {
@@ -370,14 +242,13 @@ trait MakesHttpRequests
      * @param  string  $uri
      * @param  array  $data
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function patch($uri, array $data = [], array $headers = [])
     {
         $server = $this->transformHeadersToServerVars($headers);
-        $cookies = $this->prepareCookiesForRequest();
 
-        return $this->call('PATCH', $uri, $data, $cookies, [], $server);
+        return $this->call('PATCH', $uri, $data, [], [], $server);
     }
 
     /**
@@ -386,7 +257,7 @@ trait MakesHttpRequests
      * @param  string  $uri
      * @param  array  $data
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function patchJson($uri, array $data = [], array $headers = [])
     {
@@ -399,14 +270,13 @@ trait MakesHttpRequests
      * @param  string  $uri
      * @param  array  $data
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function delete($uri, array $data = [], array $headers = [])
     {
         $server = $this->transformHeadersToServerVars($headers);
-        $cookies = $this->prepareCookiesForRequest();
 
-        return $this->call('DELETE', $uri, $data, $cookies, [], $server);
+        return $this->call('DELETE', $uri, $data, [], [], $server);
     }
 
     /**
@@ -415,40 +285,11 @@ trait MakesHttpRequests
      * @param  string  $uri
      * @param  array  $data
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function deleteJson($uri, array $data = [], array $headers = [])
     {
         return $this->json('DELETE', $uri, $data, $headers);
-    }
-
-    /**
-     * Visit the given URI with an OPTIONS request.
-     *
-     * @param  string  $uri
-     * @param  array  $data
-     * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
-     */
-    public function options($uri, array $data = [], array $headers = [])
-    {
-        $server = $this->transformHeadersToServerVars($headers);
-        $cookies = $this->prepareCookiesForRequest();
-
-        return $this->call('OPTIONS', $uri, $data, $cookies, [], $server);
-    }
-
-    /**
-     * Visit the given URI with an OPTIONS request, expecting a JSON response.
-     *
-     * @param  string  $uri
-     * @param  array  $data
-     * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
-     */
-    public function optionsJson($uri, array $data = [], array $headers = [])
-    {
-        return $this->json('OPTIONS', $uri, $data, $headers);
     }
 
     /**
@@ -458,7 +299,7 @@ trait MakesHttpRequests
      * @param  string  $uri
      * @param  array  $data
      * @param  array  $headers
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function json($method, $uri, array $data = [], array $headers = [])
     {
@@ -473,13 +314,7 @@ trait MakesHttpRequests
         ], $headers);
 
         return $this->call(
-            $method,
-            $uri,
-            [],
-            $this->prepareCookiesForJsonRequest(),
-            $files,
-            $this->transformHeadersToServerVars($headers),
-            $content
+            $method, $uri, [], [], $files, $this->transformHeadersToServerVars($headers), $content
         );
     }
 
@@ -492,8 +327,8 @@ trait MakesHttpRequests
      * @param  array  $cookies
      * @param  array  $files
      * @param  array  $server
-     * @param  string|null  $content
-     * @return \Illuminate\Testing\TestResponse
+     * @param  string  $content
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
     {
@@ -510,11 +345,11 @@ trait MakesHttpRequests
             $request = Request::createFromBase($symfonyRequest)
         );
 
-        $kernel->terminate($request, $response);
-
         if ($this->followRedirects) {
             $response = $this->followRedirects($response);
         }
+
+        $kernel->terminate($request, $response);
 
         return $this->createTestResponse($response);
     }
@@ -531,7 +366,11 @@ trait MakesHttpRequests
             $uri = substr($uri, 1);
         }
 
-        return trim(url($uri), '/');
+        if (! Str::startsWith($uri, 'http')) {
+            $uri = config('app.url').'/'.$uri;
+        }
+
+        return trim($uri, '/');
     }
 
     /**
@@ -592,44 +431,18 @@ trait MakesHttpRequests
     }
 
     /**
-     * If enabled, encrypt cookie values for request.
-     *
-     * @return array
-     */
-    protected function prepareCookiesForRequest()
-    {
-        if (! $this->encryptCookies) {
-            return array_merge($this->defaultCookies, $this->unencryptedCookies);
-        }
-
-        return collect($this->defaultCookies)->map(function ($value, $key) {
-            return encrypt(CookieValuePrefix::create($key, app('encrypter')->getKey()).$value, false);
-        })->merge($this->unencryptedCookies)->all();
-    }
-
-    /**
-     * If enabled, add cookies for JSON requests.
-     *
-     * @return array
-     */
-    protected function prepareCookiesForJsonRequest()
-    {
-        return $this->withCredentials ? $this->prepareCookiesForRequest() : [];
-    }
-
-    /**
      * Follow a redirect chain until a non-redirect is received.
      *
      * @param  \Illuminate\Http\Response  $response
-     * @return \Illuminate\Http\Response|\Illuminate\Testing\TestResponse
+     * @return \Illuminate\Http\Response
      */
     protected function followRedirects($response)
     {
-        $this->followRedirects = false;
-
         while ($response->isRedirect()) {
             $response = $this->get($response->headers->get('Location'));
         }
+
+        $this->followRedirects = false;
 
         return $response;
     }
@@ -638,16 +451,10 @@ trait MakesHttpRequests
      * Create the test response instance from the given response.
      *
      * @param  \Illuminate\Http\Response  $response
-     * @return \Illuminate\Testing\TestResponse
+     * @return \Illuminate\Foundation\Testing\TestResponse
      */
     protected function createTestResponse($response)
     {
-        return tap(TestResponse::fromBaseResponse($response), function ($response) {
-            $response->withExceptions(
-                $this->app->bound(LoggedExceptionCollection::class)
-                    ? $this->app->make(LoggedExceptionCollection::class)
-                    : new LoggedExceptionCollection
-            );
-        });
+        return TestResponse::fromBaseResponse($response);
     }
 }

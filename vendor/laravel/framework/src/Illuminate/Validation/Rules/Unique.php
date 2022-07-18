@@ -3,11 +3,10 @@
 namespace Illuminate\Validation\Rules;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Traits\Conditionable;
 
 class Unique
 {
-    use Conditionable, DatabaseRule;
+    use DatabaseRule;
 
     /**
      * The ID that should be ignored.
@@ -58,19 +57,6 @@ class Unique
     }
 
     /**
-     * Ignore soft deleted models during the unique check.
-     *
-     * @param  string  $deletedAtColumn
-     * @return $this
-     */
-    public function withoutTrashed($deletedAtColumn = 'deleted_at')
-    {
-        $this->whereNull($deletedAtColumn);
-
-        return $this;
-    }
-
-    /**
      * Convert the rule to a validation string.
      *
      * @return string
@@ -80,7 +66,7 @@ class Unique
         return rtrim(sprintf('unique:%s,%s,%s,%s,%s',
             $this->table,
             $this->column,
-            $this->ignore ? '"'.addslashes($this->ignore).'"' : 'NULL',
+            $this->ignore ? '"'.$this->ignore.'"' : 'NULL',
             $this->idColumn,
             $this->formatWheres()
         ), ',');

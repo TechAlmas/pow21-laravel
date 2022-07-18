@@ -28,23 +28,24 @@ use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadataFactoryInter
 final class ArgumentResolver implements ArgumentResolverInterface
 {
     private $argumentMetadataFactory;
-    private $argumentValueResolvers;
 
     /**
-     * @param iterable<mixed, ArgumentValueResolverInterface> $argumentValueResolvers
+     * @var iterable|ArgumentValueResolverInterface[]
      */
-    public function __construct(ArgumentMetadataFactoryInterface $argumentMetadataFactory = null, iterable $argumentValueResolvers = [])
+    private $argumentValueResolvers;
+
+    public function __construct(ArgumentMetadataFactoryInterface $argumentMetadataFactory = null, iterable $argumentValueResolvers = array())
     {
-        $this->argumentMetadataFactory = $argumentMetadataFactory ?? new ArgumentMetadataFactory();
+        $this->argumentMetadataFactory = $argumentMetadataFactory ?: new ArgumentMetadataFactory();
         $this->argumentValueResolvers = $argumentValueResolvers ?: self::getDefaultArgumentValueResolvers();
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getArguments(Request $request, callable $controller): array
+    public function getArguments(Request $request, $controller)
     {
-        $arguments = [];
+        $arguments = array();
 
         foreach ($this->argumentMetadataFactory->createArgumentMetadata($controller) as $metadata) {
             foreach ($this->argumentValueResolvers as $resolver) {
@@ -54,14 +55,12 @@ final class ArgumentResolver implements ArgumentResolverInterface
 
                 $resolved = $resolver->resolve($request, $metadata);
 
-                $atLeastOne = false;
-                foreach ($resolved as $append) {
-                    $atLeastOne = true;
-                    $arguments[] = $append;
+                if (!$resolved instanceof \Generator) {
+                    throw new \InvalidArgumentException(sprintf('%s::resolve() must yield at least one value.', get_class($resolver)));
                 }
 
-                if (!$atLeastOne) {
-                    throw new \InvalidArgumentException(sprintf('"%s::resolve()" must yield at least one value.', get_debug_type($resolver)));
+                foreach ($resolved as $append) {
+                    $arguments[] = $append;
                 }
 
                 // continue to the next controller argument
@@ -70,10 +69,10 @@ final class ArgumentResolver implements ArgumentResolverInterface
 
             $representative = $controller;
 
-            if (\is_array($representative)) {
-                $representative = sprintf('%s::%s()', \get_class($representative[0]), $representative[1]);
-            } elseif (\is_object($representative)) {
-                $representative = \get_class($representative);
+            if (is_array($representative)) {
+                $representative = sprintf('%s::%s()', get_class($representative[0]), $representative[1]);
+            } elseif (is_object($representative)) {
+                $representative = get_class($representative);
             }
 
             throw new \RuntimeException(sprintf('Controller "%s" requires that you provide a value for the "$%s" argument. Either the argument is nullable and no null value has been provided, no default value has been provided or because there is a non optional argument after this one.', $representative, $metadata->getName()));
@@ -82,17 +81,14 @@ final class ArgumentResolver implements ArgumentResolverInterface
         return $arguments;
     }
 
-    /**
-     * @return iterable<int, ArgumentValueResolverInterface>
-     */
     public static function getDefaultArgumentValueResolvers(): iterable
     {
-        return [
+        return array(
             new RequestAttributeValueResolver(),
             new RequestValueResolver(),
             new SessionValueResolver(),
             new DefaultValueResolver(),
             new VariadicValueResolver(),
-        ];
+        );
     }
 }

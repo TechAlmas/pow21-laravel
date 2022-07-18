@@ -22,12 +22,12 @@ abstract class RedirectableUrlMatcher extends UrlMatcher implements Redirectable
     /**
      * {@inheritdoc}
      */
-    public function match(string $pathinfo)
+    public function match($pathinfo)
     {
         try {
             return parent::match($pathinfo);
         } catch (ResourceNotFoundException $e) {
-            if (!\in_array($this->context->getMethod(), ['HEAD', 'GET'], true)) {
+            if (!\in_array($this->context->getMethod(), array('HEAD', 'GET'), true)) {
                 throw $e;
             }
 
@@ -44,11 +44,11 @@ abstract class RedirectableUrlMatcher extends UrlMatcher implements Redirectable
                 } finally {
                     $this->context->setScheme($scheme);
                 }
-            } elseif ('/' === $trimmedPathinfo = rtrim($pathinfo, '/') ?: '/') {
+            } elseif ('/' === $pathinfo) {
                 throw $e;
             } else {
                 try {
-                    $pathinfo = $trimmedPathinfo === $pathinfo ? $pathinfo.'/' : $trimmedPathinfo;
+                    $pathinfo = '/' !== $pathinfo[-1] ? $pathinfo.'/' : substr($pathinfo, 0, -1);
                     $ret = parent::match($pathinfo);
 
                     return $this->redirect($pathinfo, $ret['_route'] ?? null) + $ret;

@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2022 Justin Hileman
+ * (c) 2012-2018 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -26,80 +26,18 @@ class ProcessForker extends AbstractListener
     private $savegame;
     private $up;
 
-    private static $pcntlFunctions = [
-        'pcntl_fork',
-        'pcntl_signal_dispatch',
-        'pcntl_signal',
-        'pcntl_waitpid',
-        'pcntl_wexitstatus',
-    ];
-
-    private static $posixFunctions = [
-        'posix_getpid',
-        'posix_kill',
-    ];
-
     /**
      * Process forker is supported if pcntl and posix extensions are available.
      *
      * @return bool
      */
-    public static function isSupported(): bool
+    public static function isSupported()
     {
-        return self::isPcntlSupported() && !self::disabledPcntlFunctions() && self::isPosixSupported() && !self::disabledPosixFunctions();
+        return function_exists('pcntl_signal') && function_exists('posix_getpid');
     }
 
     /**
-     * Verify that all required pcntl functions are, in fact, available.
-     */
-    public static function isPcntlSupported(): bool
-    {
-        foreach (self::$pcntlFunctions as $func) {
-            if (!\function_exists($func)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Check whether required pcntl functions are disabled.
-     */
-    public static function disabledPcntlFunctions()
-    {
-        return self::checkDisabledFunctions(self::$pcntlFunctions);
-    }
-
-    /**
-     * Verify that all required posix functions are, in fact, available.
-     */
-    public static function isPosixSupported(): bool
-    {
-        foreach (self::$posixFunctions as $func) {
-            if (!\function_exists($func)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Check whether required posix functions are disabled.
-     */
-    public static function disabledPosixFunctions()
-    {
-        return self::checkDisabledFunctions(self::$posixFunctions);
-    }
-
-    private static function checkDisabledFunctions(array $functions): array
-    {
-        return \array_values(\array_intersect($functions, \array_map('strtolower', \array_map('trim', \explode(',', \ini_get('disable_functions'))))));
-    }
-
-    /**
-     * Forks into a main and a loop process.
+     * Forks into a master and a loop process.
      *
      * The loop process will handle the evaluation of all instructions, then
      * return its state via a socket upon completion.
@@ -108,64 +46,61 @@ class ProcessForker extends AbstractListener
      */
     public function beforeRun(Shell $shell)
     {
-        list($up, $down) = \stream_socket_pair(\STREAM_PF_UNIX, \STREAM_SOCK_STREAM, \STREAM_IPPROTO_IP);
+        list($up, $down) = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
 
         if (!$up) {
             throw new \RuntimeException('Unable to create socket pair');
         }
 
-        $pid = \pcntl_fork();
+        $pid = pcntl_fork();
         if ($pid < 0) {
             throw new \RuntimeException('Unable to start execution loop');
         } elseif ($pid > 0) {
             // This is the main thread. We'll just wait for a while.
 
             // We won't be needing this one.
-            \fclose($up);
+            fclose($up);
 
             // Wait for a return value from the loop process.
-            $read = [$down];
-            $write = null;
+            $read   = [$down];
+            $write  = null;
             $except = null;
 
             do {
-                $n = @\stream_select($read, $write, $except, null);
+                $n = @stream_select($read, $write, $except, null);
 
                 if ($n === 0) {
                     throw new \RuntimeException('Process timed out waiting for execution loop');
                 }
 
                 if ($n === false) {
-                    $err = \error_get_last();
-                    if (!isset($err['message']) || \stripos($err['message'], 'interrupted system call') === false) {
+                    $err = error_get_last();
+                    if (!isset($err['message']) || stripos($err['message'], 'interrupted system call') === false) {
                         $msg = $err['message'] ?
-                            \sprintf('Error waiting for execution loop: %s', $err['message']) :
+                            sprintf('Error waiting for execution loop: %s', $err['message']) :
                             'Error waiting for execution loop';
                         throw new \RuntimeException($msg);
                     }
                 }
             } while ($n < 1);
 
-            $content = \stream_get_contents($down);
-            \fclose($down);
+            $content = stream_get_contents($down);
+            fclose($down);
 
             if ($content) {
-                $shell->setScopeVariables(@\unserialize($content));
+                $shell->setScopeVariables(@unserialize($content));
             }
 
             throw new BreakException('Exiting main thread');
         }
 
         // This is the child process. It's going to do all the work.
-        if (!@\cli_set_process_title('psysh (loop)')) {
-            // Fall back to `setproctitle` if that wasn't succesful.
-            if (\function_exists('setproctitle')) {
-                @\setproctitle('psysh (loop)');
-            }
+        if (function_exists('setproctitle')) {
+            setproctitle('psysh (loop)');
         }
 
         // We won't be needing this one.
-        \fclose($down);
+        fclose($down);
 
         // Save this; we'll need to close it in `afterRun`
         $this->up = $up;
@@ -190,8 +125,8 @@ class ProcessForker extends AbstractListener
     {
         // if there's an old savegame hanging around, let's kill it.
         if (isset($this->savegame)) {
-            \posix_kill($this->savegame, \SIGKILL);
-            \pcntl_signal_dispatch();
+            posix_kill($this->savegame, SIGKILL);
+            pcntl_signal_dispatch();
         }
     }
 
@@ -205,10 +140,10 @@ class ProcessForker extends AbstractListener
     {
         // We're a child thread. Send the scope variables back up to the main thread.
         if (isset($this->up)) {
-            \fwrite($this->up, $this->serializeReturn($shell->getScopeVariables(false)));
-            \fclose($this->up);
+            fwrite($this->up, $this->serializeReturn($shell->getScopeVariables(false)));
+            fclose($this->up);
 
-            \posix_kill(\posix_getpid(), \SIGKILL);
+            posix_kill(posix_getpid(), SIGKILL);
         }
     }
 
@@ -222,18 +157,18 @@ class ProcessForker extends AbstractListener
     private function createSavegame()
     {
         // the current process will become the savegame
-        $this->savegame = \posix_getpid();
+        $this->savegame = posix_getpid();
 
-        $pid = \pcntl_fork();
+        $pid = pcntl_fork();
         if ($pid < 0) {
             throw new \RuntimeException('Unable to create savegame fork');
         } elseif ($pid > 0) {
             // we're the savegame now... let's wait and see what happens
-            \pcntl_waitpid($pid, $status);
+            pcntl_waitpid($pid, $status);
 
             // worker exited cleanly, let's bail
-            if (!\pcntl_wexitstatus($status)) {
-                \posix_kill(\posix_getpid(), \SIGKILL);
+            if (!pcntl_wexitstatus($status)) {
+                posix_kill(posix_getpid(), SIGKILL);
             }
 
             // worker didn't exit cleanly, we'll need to have another go
@@ -253,7 +188,7 @@ class ProcessForker extends AbstractListener
      *
      * @return string
      */
-    private function serializeReturn(array $return): string
+    private function serializeReturn(array $return)
     {
         $serializable = [];
 
@@ -264,26 +199,21 @@ class ProcessForker extends AbstractListener
             }
 
             // Resources and Closures don't error, but they don't serialize well either.
-            if (\is_resource($value) || $value instanceof \Closure) {
+            if (is_resource($value) || $value instanceof \Closure) {
                 continue;
             }
 
-            if (\version_compare(\PHP_VERSION, '8.1', '>=') && $value instanceof \UnitEnum) {
-                // Enums defined in the REPL session can't be unserialized.
-                $ref = new \ReflectionObject($value);
-                if (\strpos($ref->getFileName(), ": eval()'d code") !== false) {
-                    continue;
-                }
-            }
-
             try {
-                @\serialize($value);
+                @serialize($value);
                 $serializable[$key] = $value;
             } catch (\Throwable $e) {
                 // we'll just ignore this one...
+            } catch (\Exception $e) {
+                // and this one too...
+                // @todo remove this once we don't support PHP 5.x anymore :)
             }
         }
 
-        return @\serialize($serializable);
+        return @serialize($serializable);
     }
 }

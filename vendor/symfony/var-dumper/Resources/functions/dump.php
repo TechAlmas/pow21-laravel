@@ -19,8 +19,8 @@ if (!function_exists('dump')) {
     {
         VarDumper::dump($var);
 
-        foreach ($moreVars as $v) {
-            VarDumper::dump($v);
+        foreach ($moreVars as $var) {
+            VarDumper::dump($var);
         }
 
         if (1 < func_num_args()) {
@@ -32,17 +32,12 @@ if (!function_exists('dump')) {
 }
 
 if (!function_exists('dd')) {
-    /**
-     * @return never
-     */
-    function dd(...$vars)
+    function dd($var, ...$moreVars)
     {
-        if (!in_array(\PHP_SAPI, ['cli', 'phpdbg'], true) && !headers_sent()) {
-            header('HTTP/1.1 500 Internal Server Error');
-        }
+        VarDumper::dump($var);
 
-        foreach ($vars as $v) {
-            VarDumper::dump($v);
+        foreach ($moreVars as $var) {
+            VarDumper::dump($var);
         }
 
         exit(1);

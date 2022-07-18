@@ -3,10 +3,8 @@
 namespace Illuminate\Database\Schema;
 
 use Closure;
-use Illuminate\Container\Container;
-use Illuminate\Database\Connection;
-use InvalidArgumentException;
 use LogicException;
+use Illuminate\Database\Connection;
 
 class Builder
 {
@@ -39,13 +37,6 @@ class Builder
     public static $defaultStringLength = 255;
 
     /**
-     * The default relationship morph key type.
-     *
-     * @var string
-     */
-    public static $defaultMorphKeyType = 'int';
-
-    /**
      * Create a new database Schema manager.
      *
      * @param  \Illuminate\Database\Connection  $connection
@@ -69,59 +60,6 @@ class Builder
     }
 
     /**
-     * Set the default morph key type for migrations.
-     *
-     * @param  string  $type
-     * @return void
-     *
-     * @throws \InvalidArgumentException
-     */
-    public static function defaultMorphKeyType(string $type)
-    {
-        if (! in_array($type, ['int', 'uuid'])) {
-            throw new InvalidArgumentException("Morph key type must be 'int' or 'uuid'.");
-        }
-
-        static::$defaultMorphKeyType = $type;
-    }
-
-    /**
-     * Set the default morph key type for migrations to UUIDs.
-     *
-     * @return void
-     */
-    public static function morphUsingUuids()
-    {
-        return static::defaultMorphKeyType('uuid');
-    }
-
-    /**
-     * Create a database in the schema.
-     *
-     * @param  string  $name
-     * @return bool
-     *
-     * @throws \LogicException
-     */
-    public function createDatabase($name)
-    {
-        throw new LogicException('This database driver does not support creating databases.');
-    }
-
-    /**
-     * Drop a database from the schema if the database exists.
-     *
-     * @param  string  $name
-     * @return bool
-     *
-     * @throws \LogicException
-     */
-    public function dropDatabaseIfExists($name)
-    {
-        throw new LogicException('This database driver does not support dropping databases.');
-    }
-
-    /**
      * Determine if the given table exists.
      *
      * @param  string  $table
@@ -131,7 +69,7 @@ class Builder
     {
         $table = $this->connection->getTablePrefix().$table;
 
-        return count($this->connection->selectFromWriteConnection(
+        return count($this->connection->select(
             $this->grammar->compileTableExists(), [$table]
         )) > 0;
     }
@@ -154,7 +92,7 @@ class Builder
      * Determine if the given table has given columns.
      *
      * @param  string  $table
-     * @param  array  $columns
+     * @param  array   $columns
      * @return bool
      */
     public function hasColumns($table, array $columns)
@@ -192,7 +130,7 @@ class Builder
      */
     public function getColumnListing($table)
     {
-        $results = $this->connection->selectFromWriteConnection($this->grammar->compileColumnListing(
+        $results = $this->connection->select($this->grammar->compileColumnListing(
             $this->connection->getTablePrefix().$table
         ));
 
@@ -202,7 +140,7 @@ class Builder
     /**
      * Modify a table on the schema.
      *
-     * @param  string  $table
+     * @param  string    $table
      * @param  \Closure  $callback
      * @return void
      */
@@ -214,7 +152,7 @@ class Builder
     /**
      * Create a new table on the schema.
      *
-     * @param  string  $table
+     * @param  string    $table
      * @param  \Closure  $callback
      * @return void
      */
@@ -254,20 +192,6 @@ class Builder
     }
 
     /**
-     * Drop columns from a table schema.
-     *
-     * @param  string  $table
-     * @param  string|array  $columns
-     * @return void
-     */
-    public function dropColumns($table, $columns)
-    {
-        $this->table($table, function (Blueprint $blueprint) use ($columns) {
-            $blueprint->dropColumn($columns);
-        });
-    }
-
-    /**
      * Drop all tables from the database.
      *
      * @return void
@@ -277,42 +201,6 @@ class Builder
     public function dropAllTables()
     {
         throw new LogicException('This database driver does not support dropping all tables.');
-    }
-
-    /**
-     * Drop all views from the database.
-     *
-     * @return void
-     *
-     * @throws \LogicException
-     */
-    public function dropAllViews()
-    {
-        throw new LogicException('This database driver does not support dropping all views.');
-    }
-
-    /**
-     * Drop all types from the database.
-     *
-     * @return void
-     *
-     * @throws \LogicException
-     */
-    public function dropAllTypes()
-    {
-        throw new LogicException('This database driver does not support dropping all types.');
-    }
-
-    /**
-     * Get all of the table names for the database.
-     *
-     * @return void
-     *
-     * @throws \LogicException
-     */
-    public function getAllTables()
-    {
-        throw new LogicException('This database driver does not support getting all tables.');
     }
 
     /**
@@ -373,28 +261,11 @@ class Builder
      */
     protected function createBlueprint($table, Closure $callback = null)
     {
-        $prefix = $this->connection->getConfig('prefix_indexes')
-                    ? $this->connection->getConfig('prefix')
-                    : '';
-
         if (isset($this->resolver)) {
-            return call_user_func($this->resolver, $table, $callback, $prefix);
+            return call_user_func($this->resolver, $table, $callback);
         }
 
-        return Container::getInstance()->make(Blueprint::class, compact('table', 'callback', 'prefix'));
-    }
-
-    /**
-     * Register a custom Doctrine mapping type.
-     *
-     * @param  string  $class
-     * @param  string  $name
-     * @param  string  $type
-     * @return void
-     */
-    public function registerCustomDoctrineType($class, $name, $type)
-    {
-        $this->connection->registerDoctrineType($class, $name, $type);
+        return new Blueprint($table, $callback);
     }
 
     /**

@@ -37,7 +37,7 @@ class CompiledRoute implements \Serializable
      * @param array       $hostVariables An array of host variables
      * @param array       $variables     An array of variables (variables defined in the path and in the host patterns)
      */
-    public function __construct(string $staticPrefix, string $regex, array $tokens, array $pathVariables, string $hostRegex = null, array $hostTokens = [], array $hostVariables = [], array $variables = [])
+    public function __construct(string $staticPrefix, string $regex, array $tokens, array $pathVariables, string $hostRegex = null, array $hostTokens = array(), array $hostVariables = array(), array $variables = array())
     {
         $this->staticPrefix = $staticPrefix;
         $this->regex = $regex;
@@ -49,9 +49,12 @@ class CompiledRoute implements \Serializable
         $this->variables = $variables;
     }
 
-    public function __serialize(): array
+    /**
+     * {@inheritdoc}
+     */
+    public function serialize()
     {
-        return [
+        return serialize(array(
             'vars' => $this->variables,
             'path_prefix' => $this->staticPrefix,
             'path_regex' => $this->regex,
@@ -60,19 +63,16 @@ class CompiledRoute implements \Serializable
             'host_regex' => $this->hostRegex,
             'host_tokens' => $this->hostTokens,
             'host_vars' => $this->hostVariables,
-        ];
+        ));
     }
 
     /**
-     * @internal
+     * {@inheritdoc}
      */
-    final public function serialize(): string
+    public function unserialize($serialized)
     {
-        return serialize($this->__serialize());
-    }
+        $data = unserialize($serialized, array('allowed_classes' => false));
 
-    public function __unserialize(array $data): void
-    {
         $this->variables = $data['vars'];
         $this->staticPrefix = $data['path_prefix'];
         $this->regex = $data['path_regex'];
@@ -84,17 +84,9 @@ class CompiledRoute implements \Serializable
     }
 
     /**
-     * @internal
-     */
-    final public function unserialize($serialized)
-    {
-        $this->__unserialize(unserialize($serialized, ['allowed_classes' => false]));
-    }
-
-    /**
      * Returns the static prefix.
      *
-     * @return string
+     * @return string The static prefix
      */
     public function getStaticPrefix()
     {
@@ -104,7 +96,7 @@ class CompiledRoute implements \Serializable
     /**
      * Returns the regex.
      *
-     * @return string
+     * @return string The regex
      */
     public function getRegex()
     {
@@ -114,7 +106,7 @@ class CompiledRoute implements \Serializable
     /**
      * Returns the host regex.
      *
-     * @return string|null
+     * @return string|null The host regex or null
      */
     public function getHostRegex()
     {
@@ -124,7 +116,7 @@ class CompiledRoute implements \Serializable
     /**
      * Returns the tokens.
      *
-     * @return array
+     * @return array The tokens
      */
     public function getTokens()
     {
@@ -134,7 +126,7 @@ class CompiledRoute implements \Serializable
     /**
      * Returns the host tokens.
      *
-     * @return array
+     * @return array The tokens
      */
     public function getHostTokens()
     {
@@ -144,7 +136,7 @@ class CompiledRoute implements \Serializable
     /**
      * Returns the variables.
      *
-     * @return array
+     * @return array The variables
      */
     public function getVariables()
     {
@@ -154,7 +146,7 @@ class CompiledRoute implements \Serializable
     /**
      * Returns the path variables.
      *
-     * @return array
+     * @return array The variables
      */
     public function getPathVariables()
     {
@@ -164,7 +156,7 @@ class CompiledRoute implements \Serializable
     /**
      * Returns the host variables.
      *
-     * @return array
+     * @return array The variables
      */
     public function getHostVariables()
     {

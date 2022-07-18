@@ -1,6 +1,6 @@
 {
     "name": "weidner/goutte",
-    "description": "Laravel Facade for Goutte, a simple PHP Web Scraper",
+    "description": "Laravel 5 package for Goutte, a simple PHP Web Scraper",
     "license": "MIT",
     "keywords": [
       "weidner",
@@ -17,11 +17,11 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "illuminate/support": "^5|^6|^7|^8",
+        "illuminate/support": "5.*",
         "fabpot/goutte": "^3.2"
     },
     "require-dev": {
-        "orchestra/testbench": "^3.8|^4.0|^5.0"
+        "orchestra/testbench": "^3.8"
     },
     "autoload": {
         "psr-4": {
@@ -45,8 +45,5 @@
                 "Goutte": "Weidner\\Goutte\\GoutteFacade"
             }
         }
-    },
-    "scripts": {
-      "test": "phpunit"
     }
 }

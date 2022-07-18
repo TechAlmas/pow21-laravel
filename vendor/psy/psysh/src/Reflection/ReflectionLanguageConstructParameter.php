@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2022 Justin Hileman
+ * (c) 2012-2018 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -24,17 +24,14 @@ class ReflectionLanguageConstructParameter extends \ReflectionParameter
 
     public function __construct($function, $parameter, array $opts)
     {
-        $this->function = $function;
+        $this->function  = $function;
         $this->parameter = $parameter;
-        $this->opts = $opts;
+        $this->opts      = $opts;
     }
 
     /**
      * No class here.
-     *
-     * @todo remove \ReturnTypeWillChange attribute after dropping support for PHP 7.0 (when we can use nullable types)
      */
-    #[\ReturnTypeWillChange]
     public function getClass()
     {
         return;
@@ -45,26 +42,21 @@ class ReflectionLanguageConstructParameter extends \ReflectionParameter
      *
      * @return bool
      */
-    public function isArray(): bool
+    public function isArray()
     {
-        return \array_key_exists('isArray', $this->opts) && $this->opts['isArray'];
+        return array_key_exists('isArray', $this->opts) && $this->opts['isArray'];
     }
 
     /**
      * Get param default value.
      *
-     * @todo remove \ReturnTypeWillChange attribute after dropping support for PHP 7.x (when we can use mixed type)
-     *
      * @return mixed
      */
-    #[\ReturnTypeWillChange]
     public function getDefaultValue()
     {
         if ($this->isDefaultValueAvailable()) {
             return $this->opts['defaultValue'];
         }
-
-        return null;
     }
 
     /**
@@ -72,7 +64,7 @@ class ReflectionLanguageConstructParameter extends \ReflectionParameter
      *
      * @return string
      */
-    public function getName(): string
+    public function getName()
     {
         return $this->parameter;
     }
@@ -82,9 +74,9 @@ class ReflectionLanguageConstructParameter extends \ReflectionParameter
      *
      * @return bool
      */
-    public function isOptional(): bool
+    public function isOptional()
     {
-        return \array_key_exists('isOptional', $this->opts) && $this->opts['isOptional'];
+        return array_key_exists('isOptional', $this->opts) && $this->opts['isOptional'];
     }
 
     /**
@@ -92,9 +84,9 @@ class ReflectionLanguageConstructParameter extends \ReflectionParameter
      *
      * @return bool
      */
-    public function isDefaultValueAvailable(): bool
+    public function isDefaultValueAvailable()
     {
-        return \array_key_exists('defaultValue', $this->opts);
+        return array_key_exists('defaultValue', $this->opts);
     }
 
     /**
@@ -104,8 +96,8 @@ class ReflectionLanguageConstructParameter extends \ReflectionParameter
      *
      * @return bool
      */
-    public function isPassedByReference(): bool
+    public function isPassedByReference()
     {
-        return \array_key_exists('isPassedByReference', $this->opts) && $this->opts['isPassedByReference'];
+        return array_key_exists('isPassedByReference', $this->opts) && $this->opts['isPassedByReference'];
     }
 }

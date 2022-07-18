@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2022 Justin Hileman
+ * (c) 2012-2018 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -31,7 +31,6 @@ abstract class AbstractMatcher
     const T_CLONE = 'T_CLONE';
     const T_NS_SEPARATOR = 'T_NS_SEPARATOR';
     const T_STRING = 'T_STRING';
-    const T_NAME_QUALIFIED = 'T_NAME_QUALIFIED';
     const T_WHITESPACE = 'T_WHITESPACE';
     const T_AND_EQUAL = 'T_AND_EQUAL';
     const T_BOOLEAN_AND = 'T_BOOLEAN_AND';
@@ -50,7 +49,7 @@ abstract class AbstractMatcher
      *
      * @return bool
      */
-    public function hasMatched(array $tokens): bool
+    public function hasMatched(array $tokens)
     {
         return false;
     }
@@ -62,10 +61,10 @@ abstract class AbstractMatcher
      *
      * @return string
      */
-    protected function getInput(array $tokens): string
+    protected function getInput(array $tokens)
     {
         $var = '';
-        $firstToken = \array_pop($tokens);
+        $firstToken = array_pop($tokens);
         if (self::tokenIs($firstToken, self::T_STRING)) {
             $var = $firstToken[1];
         }
@@ -80,18 +79,18 @@ abstract class AbstractMatcher
      *
      * @return string
      */
-    protected function getNamespaceAndClass(array $tokens): string
+    protected function getNamespaceAndClass($tokens)
     {
         $class = '';
         while (self::hasToken(
-            [self::T_NS_SEPARATOR, self::T_STRING, self::T_NAME_QUALIFIED],
-            $token = \array_pop($tokens)
+            [self::T_NS_SEPARATOR, self::T_STRING],
+            $token = array_pop($tokens)
         )) {
             if (self::needCompleteClass($token)) {
                 continue;
             }
 
-            $class = $token[1].$class;
+            $class = $token[1] . $class;
         }
 
         return $class;
@@ -105,7 +104,7 @@ abstract class AbstractMatcher
      *
      * @return array The matches resulting from the query
      */
-    abstract public function getMatches(array $tokens, array $info = []): array;
+    abstract public function getMatches(array $tokens, array $info = []);
 
     /**
      * Check whether $word starts with $prefix.
@@ -115,9 +114,9 @@ abstract class AbstractMatcher
      *
      * @return bool
      */
-    public static function startsWith(string $prefix, string $word): bool
+    public static function startsWith($prefix, $word)
     {
-        return \preg_match(\sprintf('#^%s#', $prefix), $word);
+        return preg_match(sprintf('#^%s#', $prefix), $word);
     }
 
     /**
@@ -128,32 +127,32 @@ abstract class AbstractMatcher
      *
      * @return bool
      */
-    public static function hasSyntax($token, string $syntax = self::VAR_SYNTAX): bool
+    public static function hasSyntax($token, $syntax = self::VAR_SYNTAX)
     {
-        if (!\is_array($token)) {
+        if (!is_array($token)) {
             return false;
         }
 
-        $regexp = \sprintf('#%s#', $syntax);
+        $regexp = sprintf('#%s#', $syntax);
 
-        return (bool) \preg_match($regexp, $token[1]);
+        return (bool) preg_match($regexp, $token[1]);
     }
 
     /**
      * Check whether $token type is $which.
      *
-     * @param mixed  $token A PHP token (see token_get_all)
      * @param string $which A PHP token type
+     * @param mixed  $token A PHP token (see token_get_all)
      *
      * @return bool
      */
-    public static function tokenIs($token, string $which): bool
+    public static function tokenIs($token, $which)
     {
-        if (!\is_array($token)) {
+        if (!is_array($token)) {
             return false;
         }
 
-        return \token_name($token[0]) === $which;
+        return token_name($token[0]) === $which;
     }
 
     /**
@@ -163,18 +162,18 @@ abstract class AbstractMatcher
      *
      * @return bool
      */
-    public static function isOperator($token): bool
+    public static function isOperator($token)
     {
-        if (!\is_string($token)) {
+        if (!is_string($token)) {
             return false;
         }
 
-        return \strpos(self::MISC_OPERATORS, $token) !== false;
+        return strpos(self::MISC_OPERATORS, $token) !== false;
     }
 
-    public static function needCompleteClass($token): bool
+    public static function needCompleteClass($token)
     {
-        return \in_array($token[1], ['doc', 'ls', 'show']);
+        return in_array($token[1], ['doc', 'ls', 'show']);
     }
 
     /**
@@ -185,12 +184,12 @@ abstract class AbstractMatcher
      *
      * @return bool
      */
-    public static function hasToken(array $coll, $token): bool
+    public static function hasToken(array $coll, $token)
     {
-        if (!\is_array($token)) {
+        if (!is_array($token)) {
             return false;
         }
 
-        return \in_array(\token_name($token[0]), $coll);
+        return in_array(token_name($token[0]), $coll);
     }
 }

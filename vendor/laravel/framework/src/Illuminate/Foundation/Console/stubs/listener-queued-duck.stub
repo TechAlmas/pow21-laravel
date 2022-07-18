@@ -1,14 +1,14 @@
 <?php
 
-namespace {{ namespace }};
+namespace DummyNamespace;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
-class {{ class }} implements ShouldQueue
+class DummyClass implements ShouldQueue
 {
     use InteractsWithQueue;
-
+    
     /**
      * Create the event listener.
      *

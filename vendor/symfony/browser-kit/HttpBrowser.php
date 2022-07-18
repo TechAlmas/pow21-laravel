@@ -23,6 +23,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * to make real HTTP requests.
  *
  * @author Fabien Potencier <fabien@symfony.com>
+ *
+ * @final
  */
 class HttpBrowser extends AbstractBrowser
 {
@@ -30,7 +32,7 @@ class HttpBrowser extends AbstractBrowser
 
     public function __construct(HttpClientInterface $client = null, History $history = null, CookieJar $cookieJar = null)
     {
-        if (!$client && !class_exists(HttpClient::class)) {
+        if (!class_exists(HttpClient::class)) {
             throw new \LogicException(sprintf('You cannot use "%s" as the HttpClient component is not installed. Try running "composer require symfony/http-client".', __CLASS__));
         }
 
@@ -39,13 +41,10 @@ class HttpBrowser extends AbstractBrowser
         parent::__construct([], $history, $cookieJar);
     }
 
-    /**
-     * @param Request $request
-     */
-    protected function doRequest(object $request): Response
+    protected function doRequest($request)
     {
         $headers = $this->getHeaders($request);
-        [$body, $extraHeaders] = $this->getBodyAndExtraHeaders($request, $headers);
+        [$body, $extraHeaders] = $this->getBodyAndExtraHeaders($request);
 
         $response = $this->client->request($request->getMethod(), $request->getUri(), [
             'headers' => array_merge($headers, $extraHeaders),
@@ -59,9 +58,9 @@ class HttpBrowser extends AbstractBrowser
     /**
      * @return array [$body, $headers]
      */
-    private function getBodyAndExtraHeaders(Request $request, array $headers): array
+    private function getBodyAndExtraHeaders(Request $request): array
     {
-        if (\in_array($request->getMethod(), ['GET', 'HEAD']) && !isset($headers['content-type'])) {
+        if (\in_array($request->getMethod(), ['GET', 'HEAD'])) {
             return ['', []];
         }
 
@@ -70,19 +69,24 @@ class HttpBrowser extends AbstractBrowser
         }
 
         if (null !== $content = $request->getContent()) {
-            if (isset($headers['content-type'])) {
-                return [$content, []];
-            }
-
             $part = new TextPart($content, 'utf-8', 'plain', '8bit');
 
             return [$part->bodyToString(), $part->getPreparedHeaders()->toArray()];
         }
 
         $fields = $request->getParameters();
+        $hasFile = false;
+        foreach ($request->getFiles() as $name => $file) {
+            if (!isset($file['tmp_name'])) {
+                continue;
+            }
 
-        if ($uploadedFiles = $this->getUploadedFiles($request->getFiles())) {
-            $part = new FormDataPart(array_merge($fields, $uploadedFiles));
+            $hasFile = true;
+            $fields[$name] = DataPart::fromPath($file['tmp_name'], $file['name']);
+        }
+
+        if ($hasFile) {
+            $part = new FormDataPart($fields);
 
             return [$part->bodyToIterable(), $part->getPreparedHeaders()->toArray()];
         }
@@ -91,27 +95,16 @@ class HttpBrowser extends AbstractBrowser
             return ['', []];
         }
 
-        array_walk_recursive($fields, $caster = static function (&$v) use (&$caster) {
-            if (\is_object($v)) {
-                if ($vars = get_object_vars($v)) {
-                    array_walk_recursive($vars, $caster);
-                    $v = $vars;
-                } elseif (method_exists($v, '__toString')) {
-                    $v = (string) $v;
-                }
-            }
-        });
-
-        return [http_build_query($fields, '', '&'), ['Content-Type' => 'application/x-www-form-urlencoded']];
+        return [http_build_query($fields, '', '&', PHP_QUERY_RFC1738), ['Content-Type' => 'application/x-www-form-urlencoded']];
     }
 
-    protected function getHeaders(Request $request): array
+    private function getHeaders(Request $request): array
     {
         $headers = [];
         foreach ($request->getServer() as $key => $value) {
             $key = strtolower(str_replace('_', '-', $key));
             $contentHeaders = ['content-length' => true, 'content-md5' => true, 'content-type' => true];
-            if (str_starts_with($key, 'http-')) {
+            if (0 === strpos($key, 'http-')) {
                 $headers[substr($key, 5)] = $value;
             } elseif (isset($contentHeaders[$key])) {
                 // CONTENT_* are not prefixed with HTTP_
@@ -127,27 +120,5 @@ class HttpBrowser extends AbstractBrowser
         }
 
         return $headers;
-    }
-
-    /**
-     * Recursively go through the list. If the file has a tmp_name, convert it to a DataPart.
-     * Keep the original hierarchy.
-     */
-    private function getUploadedFiles(array $files): array
-    {
-        $uploadedFiles = [];
-        foreach ($files as $name => $file) {
-            if (!\is_array($file)) {
-                return $uploadedFiles;
-            }
-            if (!isset($file['tmp_name'])) {
-                $uploadedFiles[$name] = $this->getUploadedFiles($file);
-            }
-            if (isset($file['tmp_name'])) {
-                $uploadedFiles[$name] = DataPart::fromPath($file['tmp_name'], $file['name']);
-            }
-        }
-
-        return $uploadedFiles;
     }
 }

@@ -30,6 +30,8 @@ class PDF{
     protected $view;
 
     protected $rendered = false;
+    protected $orientation;
+    protected $paper;
     protected $showWarnings;
     protected $public_path;
 
@@ -65,6 +67,8 @@ class PDF{
      * @return $this
      */
     public function setPaper($paper, $orientation = 'portrait'){
+        $this->paper = $paper;
+        $this->orientation = $orientation;
         $this->dompdf->setPaper($paper, $orientation);
         return $this;
     }
@@ -103,19 +107,6 @@ class PDF{
     public function loadFile($file){
         $this->dompdf->loadHtmlFile($file);
         $this->rendered = false;
-        return $this;
-    }
-    
-    /**
-     * Add metadata info
-     *
-     * @param array $info
-     * @return static
-     */
-    public function addInfo($info){
-        foreach($info as $name=>$value){
-            $this->dompdf->add_info($name, $value);
-        }
         return $this;
     }
 
@@ -178,8 +169,7 @@ class PDF{
         $output = $this->output();
         return new Response($output, 200, array(
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' =>  'attachment; filename="'.$filename.'"',
-                'Content-Length' => strlen($output),
+                'Content-Disposition' =>  'attachment; filename="'.$filename.'"'
             ));
     }
 
@@ -205,6 +195,8 @@ class PDF{
             throw new Exception('DOMPDF not created yet');
         }
 
+        $this->dompdf->setPaper($this->paper, $this->orientation);
+
         $this->dompdf->render();
 
         if ( $this->showWarnings ) {
@@ -223,16 +215,7 @@ class PDF{
         $this->rendered = true;
     }
 
-    
-    public function setEncryption($password) {
-       if (!$this->dompdf) {
-           throw new Exception("DOMPDF not created yet");
-       }
-       $this->render();
-       return $this->dompdf->getCanvas()->get_cpdf()->setEncryption("pass", $password);
-    }
-    
-    
+
     protected function convertEntities($subject){
         $entities = array(
             '€' => '&#0128;',

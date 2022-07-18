@@ -11,14 +11,10 @@
 
 namespace Symfony\Component\HttpFoundation;
 
-use Symfony\Component\HttpFoundation\Exception\BadRequestException;
-
 /**
  * ParameterBag is a container for key/value pairs.
  *
  * @author Fabien Potencier <fabien@symfony.com>
- *
- * @implements \IteratorAggregate<string, mixed>
  */
 class ParameterBag implements \IteratorAggregate, \Countable
 {
@@ -27,7 +23,10 @@ class ParameterBag implements \IteratorAggregate, \Countable
      */
     protected $parameters;
 
-    public function __construct(array $parameters = [])
+    /**
+     * @param array $parameters An array of parameters
+     */
+    public function __construct(array $parameters = array())
     {
         $this->parameters = $parameters;
     }
@@ -35,29 +34,17 @@ class ParameterBag implements \IteratorAggregate, \Countable
     /**
      * Returns the parameters.
      *
-     * @param string|null $key The name of the parameter to return or null to get them all
-     *
-     * @return array
+     * @return array An array of parameters
      */
-    public function all(/*string $key = null*/)
+    public function all()
     {
-        $key = \func_num_args() > 0 ? func_get_arg(0) : null;
-
-        if (null === $key) {
-            return $this->parameters;
-        }
-
-        if (!\is_array($value = $this->parameters[$key] ?? [])) {
-            throw new BadRequestException(sprintf('Unexpected value for parameter "%s": expecting "array", got "%s".', $key, get_debug_type($value)));
-        }
-
-        return $value;
+        return $this->parameters;
     }
 
     /**
      * Returns the parameter keys.
      *
-     * @return array
+     * @return array An array of parameter keys
      */
     public function keys()
     {
@@ -66,16 +53,20 @@ class ParameterBag implements \IteratorAggregate, \Countable
 
     /**
      * Replaces the current parameters by a new set.
+     *
+     * @param array $parameters An array of parameters
      */
-    public function replace(array $parameters = [])
+    public function replace(array $parameters = array())
     {
         $this->parameters = $parameters;
     }
 
     /**
      * Adds parameters.
+     *
+     * @param array $parameters An array of parameters
      */
-    public function add(array $parameters = [])
+    public function add(array $parameters = array())
     {
         $this->parameters = array_replace($this->parameters, $parameters);
     }
@@ -83,21 +74,23 @@ class ParameterBag implements \IteratorAggregate, \Countable
     /**
      * Returns a parameter by name.
      *
-     * @param mixed $default The default value if the parameter key does not exist
+     * @param string $key     The key
+     * @param mixed  $default The default value if the parameter key does not exist
      *
      * @return mixed
      */
-    public function get(string $key, $default = null)
+    public function get($key, $default = null)
     {
-        return \array_key_exists($key, $this->parameters) ? $this->parameters[$key] : $default;
+        return array_key_exists($key, $this->parameters) ? $this->parameters[$key] : $default;
     }
 
     /**
      * Sets a parameter by name.
      *
-     * @param mixed $value The value
+     * @param string $key   The key
+     * @param mixed  $value The value
      */
-    public function set(string $key, $value)
+    public function set($key, $value)
     {
         $this->parameters[$key] = $value;
     }
@@ -105,17 +98,21 @@ class ParameterBag implements \IteratorAggregate, \Countable
     /**
      * Returns true if the parameter is defined.
      *
-     * @return bool
+     * @param string $key The key
+     *
+     * @return bool true if the parameter exists, false otherwise
      */
-    public function has(string $key)
+    public function has($key)
     {
-        return \array_key_exists($key, $this->parameters);
+        return array_key_exists($key, $this->parameters);
     }
 
     /**
      * Removes a parameter.
+     *
+     * @param string $key The key
      */
-    public function remove(string $key)
+    public function remove($key)
     {
         unset($this->parameters[$key]);
     }
@@ -123,9 +120,12 @@ class ParameterBag implements \IteratorAggregate, \Countable
     /**
      * Returns the alphabetic characters of the parameter value.
      *
-     * @return string
+     * @param string $key     The parameter key
+     * @param string $default The default value if the parameter key does not exist
+     *
+     * @return string The filtered value
      */
-    public function getAlpha(string $key, string $default = '')
+    public function getAlpha($key, $default = '')
     {
         return preg_replace('/[^[:alpha:]]/', '', $this->get($key, $default));
     }
@@ -133,9 +133,12 @@ class ParameterBag implements \IteratorAggregate, \Countable
     /**
      * Returns the alphabetic characters and digits of the parameter value.
      *
-     * @return string
+     * @param string $key     The parameter key
+     * @param string $default The default value if the parameter key does not exist
+     *
+     * @return string The filtered value
      */
-    public function getAlnum(string $key, string $default = '')
+    public function getAlnum($key, $default = '')
     {
         return preg_replace('/[^[:alnum:]]/', '', $this->get($key, $default));
     }
@@ -143,20 +146,26 @@ class ParameterBag implements \IteratorAggregate, \Countable
     /**
      * Returns the digits of the parameter value.
      *
-     * @return string
+     * @param string $key     The parameter key
+     * @param string $default The default value if the parameter key does not exist
+     *
+     * @return string The filtered value
      */
-    public function getDigits(string $key, string $default = '')
+    public function getDigits($key, $default = '')
     {
         // we need to remove - and + because they're allowed in the filter
-        return str_replace(['-', '+'], '', $this->filter($key, $default, \FILTER_SANITIZE_NUMBER_INT));
+        return str_replace(array('-', '+'), '', $this->filter($key, $default, FILTER_SANITIZE_NUMBER_INT));
     }
 
     /**
      * Returns the parameter value converted to integer.
      *
-     * @return int
+     * @param string $key     The parameter key
+     * @param int    $default The default value if the parameter key does not exist
+     *
+     * @return int The filtered value
      */
-    public function getInt(string $key, int $default = 0)
+    public function getInt($key, $default = 0)
     {
         return (int) $this->get($key, $default);
     }
@@ -164,41 +173,40 @@ class ParameterBag implements \IteratorAggregate, \Countable
     /**
      * Returns the parameter value converted to boolean.
      *
-     * @return bool
+     * @param string $key     The parameter key
+     * @param mixed  $default The default value if the parameter key does not exist
+     *
+     * @return bool The filtered value
      */
-    public function getBoolean(string $key, bool $default = false)
+    public function getBoolean($key, $default = false)
     {
-        return $this->filter($key, $default, \FILTER_VALIDATE_BOOLEAN);
+        return $this->filter($key, $default, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
      * Filter key.
      *
-     * @param mixed $default Default = null
-     * @param int   $filter  FILTER_* constant
-     * @param mixed $options Filter options
+     * @param string $key     Key
+     * @param mixed  $default Default = null
+     * @param int    $filter  FILTER_* constant
+     * @param mixed  $options Filter options
      *
-     * @see https://php.net/filter-var
+     * @see http://php.net/manual/en/function.filter-var.php
      *
      * @return mixed
      */
-    public function filter(string $key, $default = null, int $filter = \FILTER_DEFAULT, $options = [])
+    public function filter($key, $default = null, $filter = FILTER_DEFAULT, $options = array())
     {
         $value = $this->get($key, $default);
 
         // Always turn $options into an array - this allows filter_var option shortcuts.
-        if (!\is_array($options) && $options) {
-            $options = ['flags' => $options];
+        if (!is_array($options) && $options) {
+            $options = array('flags' => $options);
         }
 
         // Add a convenience check for arrays.
-        if (\is_array($value) && !isset($options['flags'])) {
-            $options['flags'] = \FILTER_REQUIRE_ARRAY;
-        }
-
-        if ((\FILTER_CALLBACK & $filter) && !(($options['options'] ?? null) instanceof \Closure)) {
-            trigger_deprecation('symfony/http-foundation', '5.2', 'Not passing a Closure together with FILTER_CALLBACK to "%s()" is deprecated. Wrap your filter in a closure instead.', __METHOD__);
-            // throw new \InvalidArgumentException(sprintf('A Closure must be passed to "%s()" when FILTER_CALLBACK is used, "%s" given.', __METHOD__, get_debug_type($options['options'] ?? null)));
+        if (is_array($value) && !isset($options['flags'])) {
+            $options['flags'] = FILTER_REQUIRE_ARRAY;
         }
 
         return filter_var($value, $filter, $options);
@@ -207,9 +215,8 @@ class ParameterBag implements \IteratorAggregate, \Countable
     /**
      * Returns an iterator for parameters.
      *
-     * @return \ArrayIterator<string, mixed>
+     * @return \ArrayIterator An \ArrayIterator instance
      */
-    #[\ReturnTypeWillChange]
     public function getIterator()
     {
         return new \ArrayIterator($this->parameters);
@@ -218,11 +225,10 @@ class ParameterBag implements \IteratorAggregate, \Countable
     /**
      * Returns the number of parameters.
      *
-     * @return int
+     * @return int The number of parameters
      */
-    #[\ReturnTypeWillChange]
     public function count()
     {
-        return \count($this->parameters);
+        return count($this->parameters);
     }
 }
