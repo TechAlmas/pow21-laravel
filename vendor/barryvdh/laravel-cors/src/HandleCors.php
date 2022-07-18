@@ -1,5 +1,6 @@
 <?php
 
+
 namespace Fruitcake\Cors;
 
 use Closure;
