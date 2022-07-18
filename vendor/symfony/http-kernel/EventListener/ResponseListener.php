@@ -11,34 +11,30 @@
 
 namespace Symfony\Component\HttpKernel\EventListener;
 
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpKernel\Event\ResponseEvent;
+use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * ResponseListener fixes the Response headers based on the Request.
  *
  * @author Fabien Potencier <fabien@symfony.com>
- *
- * @final
  */
 class ResponseListener implements EventSubscriberInterface
 {
     private $charset;
-    private $addContentLanguageHeader;
 
-    public function __construct(string $charset, bool $addContentLanguageHeader = false)
+    public function __construct(string $charset)
     {
         $this->charset = $charset;
-        $this->addContentLanguageHeader = $addContentLanguageHeader;
     }
 
     /**
      * Filters the Response.
      */
-    public function onKernelResponse(ResponseEvent $event)
+    public function onKernelResponse(FilterResponseEvent $event)
     {
-        if (!$event->isMainRequest()) {
+        if (!$event->isMasterRequest()) {
             return;
         }
 
@@ -48,21 +44,13 @@ class ResponseListener implements EventSubscriberInterface
             $response->setCharset($this->charset);
         }
 
-        if ($this->addContentLanguageHeader && !$response->isInformational() && !$response->isEmpty() && !$response->headers->has('Content-Language')) {
-            $response->headers->set('Content-Language', $event->getRequest()->getLocale());
-        }
-
-        if ($event->getRequest()->attributes->get('_vary_by_language')) {
-            $response->setVary('Accept-Language', false);
-        }
-
         $response->prepare($event->getRequest());
     }
 
-    public static function getSubscribedEvents(): array
+    public static function getSubscribedEvents()
     {
-        return [
+        return array(
             KernelEvents::RESPONSE => 'onKernelResponse',
-        ];
+        );
     }
 }

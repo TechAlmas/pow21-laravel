@@ -22,9 +22,9 @@ use Symfony\Component\HttpFoundation\Session\SessionBagInterface;
  */
 class MetadataBag implements SessionBagInterface
 {
-    public const CREATED = 'c';
-    public const UPDATED = 'u';
-    public const LIFETIME = 'l';
+    const CREATED = 'c';
+    const UPDATED = 'u';
+    const LIFETIME = 'l';
 
     /**
      * @var string
@@ -39,7 +39,7 @@ class MetadataBag implements SessionBagInterface
     /**
      * @var array
      */
-    protected $meta = [self::CREATED => 0, self::UPDATED => 0, self::LIFETIME => 0];
+    protected $meta = array(self::CREATED => 0, self::UPDATED => 0, self::LIFETIME => 0);
 
     /**
      * Unix timestamp.
@@ -100,7 +100,7 @@ class MetadataBag implements SessionBagInterface
      *                      to expire with browser session. Time is in seconds, and is
      *                      not a Unix timestamp.
      */
-    public function stampNew(int $lifetime = null)
+    public function stampNew($lifetime = null)
     {
         $this->stampCreated($lifetime);
     }
@@ -139,7 +139,6 @@ class MetadataBag implements SessionBagInterface
     public function clear()
     {
         // nothing to do
-        return null;
     }
 
     /**
@@ -152,16 +151,18 @@ class MetadataBag implements SessionBagInterface
 
     /**
      * Sets name.
+     *
+     * @param string $name
      */
-    public function setName(string $name)
+    public function setName($name)
     {
         $this->name = $name;
     }
 
-    private function stampCreated(int $lifetime = null): void
+    private function stampCreated($lifetime = null)
     {
         $timeStamp = time();
         $this->meta[self::CREATED] = $this->meta[self::UPDATED] = $this->lastUsed = $timeStamp;
-        $this->meta[self::LIFETIME] = $lifetime ?? (int) ini_get('session.cookie_lifetime');
+        $this->meta[self::LIFETIME] = (null === $lifetime) ? ini_get('session.cookie_lifetime') : $lifetime;
     }
 }

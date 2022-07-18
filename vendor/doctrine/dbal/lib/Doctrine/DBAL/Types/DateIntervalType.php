@@ -2,10 +2,7 @@
 
 namespace Doctrine\DBAL\Types;
 
-use DateInterval;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Throwable;
-
 use function substr;
 
 /**
@@ -20,17 +17,18 @@ class DateIntervalType extends Type
      */
     public function getName()
     {
-        return Types::DATEINTERVAL;
+        return Type::DATEINTERVAL;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getSQLDeclaration(array $column, AbstractPlatform $platform)
+    public function getSQLDeclaration(array $fieldDeclaration, AbstractPlatform $platform)
     {
-        $column['length'] = 255;
+        $fieldDeclaration['length'] = 255;
+        $fieldDeclaration['fixed']  = true;
 
-        return $platform->getVarcharTypeDeclarationSQL($column);
+        return $platform->getVarcharTypeDeclarationSQL($fieldDeclaration);
     }
 
     /**
@@ -38,11 +36,11 @@ class DateIntervalType extends Type
      */
     public function convertToDatabaseValue($value, AbstractPlatform $platform)
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
 
-        if ($value instanceof DateInterval) {
+        if ($value instanceof \DateInterval) {
             return $value->format(self::FORMAT);
         }
 
@@ -54,7 +52,7 @@ class DateIntervalType extends Type
      */
     public function convertToPHPValue($value, AbstractPlatform $platform)
     {
-        if ($value === null || $value instanceof DateInterval) {
+        if ($value === null || $value instanceof \DateInterval) {
             return $value;
         }
 
@@ -66,14 +64,14 @@ class DateIntervalType extends Type
         }
 
         try {
-            $interval = new DateInterval($value);
+            $interval = new \DateInterval($value);
 
             if ($negative) {
                 $interval->invert = 1;
             }
 
             return $interval;
-        } catch (Throwable $exception) {
+        } catch (\Exception $exception) {
             throw ConversionException::conversionFailedFormat($value, $this->getName(), self::FORMAT, $exception);
         }
     }

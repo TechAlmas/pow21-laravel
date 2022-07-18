@@ -48,66 +48,36 @@ class RecursiveDirectoryIterator extends \RecursiveDirectoryIterator
         parent::__construct($path, $flags);
         $this->ignoreUnreadableDirs = $ignoreUnreadableDirs;
         $this->rootPath = $path;
-        if ('/' !== \DIRECTORY_SEPARATOR && !($flags & self::UNIX_PATHS)) {
-            $this->directorySeparator = \DIRECTORY_SEPARATOR;
+        if ('/' !== DIRECTORY_SEPARATOR && !($flags & self::UNIX_PATHS)) {
+            $this->directorySeparator = DIRECTORY_SEPARATOR;
         }
     }
 
     /**
      * Return an instance of SplFileInfo with support for relative paths.
      *
-     * @return SplFileInfo
+     * @return SplFileInfo File information
      */
-    #[\ReturnTypeWillChange]
     public function current()
     {
         // the logic here avoids redoing the same work in all iterations
 
         if (null === $subPathname = $this->subPath) {
-            $subPathname = $this->subPath = $this->getSubPath();
+            $subPathname = $this->subPath = (string) $this->getSubPath();
         }
         if ('' !== $subPathname) {
             $subPathname .= $this->directorySeparator;
         }
         $subPathname .= $this->getFilename();
 
-        if ('/' !== $basePath = $this->rootPath) {
-            $basePath .= $this->directorySeparator;
-        }
-
-        return new SplFileInfo($basePath.$subPathname, $this->subPath, $subPathname);
+        return new SplFileInfo($this->rootPath.$this->directorySeparator.$subPathname, $this->subPath, $subPathname);
     }
 
     /**
-     * @param bool $allowLinks
-     *
-     * @return bool
-     */
-    #[\ReturnTypeWillChange]
-    public function hasChildren($allowLinks = false)
-    {
-        $hasChildren = parent::hasChildren($allowLinks);
-
-        if (!$hasChildren || !$this->ignoreUnreadableDirs) {
-            return $hasChildren;
-        }
-
-        try {
-            parent::getChildren();
-
-            return true;
-        } catch (\UnexpectedValueException $e) {
-            // If directory is unreadable and finder is set to ignore it, skip children
-            return false;
-        }
-    }
-
-    /**
-     * @return \RecursiveDirectoryIterator
+     * @return \RecursiveIterator
      *
      * @throws AccessDeniedException
      */
-    #[\ReturnTypeWillChange]
     public function getChildren()
     {
         try {
@@ -124,16 +94,18 @@ class RecursiveDirectoryIterator extends \RecursiveDirectoryIterator
 
             return $children;
         } catch (\UnexpectedValueException $e) {
-            throw new AccessDeniedException($e->getMessage(), $e->getCode(), $e);
+            if ($this->ignoreUnreadableDirs) {
+                // If directory is unreadable and finder is set to ignore it, a fake empty content is returned.
+                return new \RecursiveArrayIterator(array());
+            } else {
+                throw new AccessDeniedException($e->getMessage(), $e->getCode(), $e);
+            }
         }
     }
 
     /**
      * Do nothing for non rewindable stream.
-     *
-     * @return void
      */
-    #[\ReturnTypeWillChange]
     public function rewind()
     {
         if (false === $this->isRewindable()) {
@@ -146,7 +118,7 @@ class RecursiveDirectoryIterator extends \RecursiveDirectoryIterator
     /**
      * Checks if the stream is rewindable.
      *
-     * @return bool
+     * @return bool true when the stream is rewindable, false otherwise
      */
     public function isRewindable()
     {

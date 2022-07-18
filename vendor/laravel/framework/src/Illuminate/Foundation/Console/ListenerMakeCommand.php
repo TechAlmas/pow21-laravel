@@ -2,15 +2,12 @@
 
 namespace Illuminate\Foundation\Console;
 
-use Illuminate\Console\Concerns\CreatesMatchingTest;
-use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Str;
+use Illuminate\Console\GeneratorCommand;
 use Symfony\Component\Console\Input\InputOption;
 
 class ListenerMakeCommand extends GeneratorCommand
 {
-    use CreatesMatchingTest;
-
     /**
      * The console command name.
      *
@@ -47,15 +44,15 @@ class ListenerMakeCommand extends GeneratorCommand
             'Illuminate',
             '\\',
         ])) {
-            $event = $this->laravel->getNamespace().'Events\\'.str_replace('/', '\\', $event);
+            $event = $this->laravel->getNamespace().'Events\\'.$event;
         }
 
         $stub = str_replace(
-            ['DummyEvent', '{{ event }}'], class_basename($event), parent::buildClass($name)
+            'DummyEvent', class_basename($event), parent::buildClass($name)
         );
 
         return str_replace(
-            ['DummyFullEvent', '{{ eventNamespace }}'], trim($event, '\\'), $stub
+            'DummyFullEvent', $event, $stub
         );
     }
 
@@ -107,9 +104,9 @@ class ListenerMakeCommand extends GeneratorCommand
     protected function getOptions()
     {
         return [
-            ['event', 'e', InputOption::VALUE_OPTIONAL, 'The event class being listened for'],
+            ['event', 'e', InputOption::VALUE_OPTIONAL, 'The event class being listened for.'],
 
-            ['queued', null, InputOption::VALUE_NONE, 'Indicates the event listener should be queued'],
+            ['queued', null, InputOption::VALUE_NONE, 'Indicates the event listener should be queued.'],
         ];
     }
 }

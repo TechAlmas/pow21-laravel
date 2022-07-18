@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 /*
  * This file is part of PHPUnit.
  *
@@ -7,37 +7,16 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace PHPUnit\Framework;
 
-use const DEBUG_BACKTRACE_IGNORE_ARGS;
-use const PHP_EOL;
-use function array_shift;
-use function array_unshift;
-use function assert;
-use function class_exists;
-use function count;
-use function debug_backtrace;
-use function explode;
-use function file_get_contents;
-use function func_get_args;
-use function implode;
-use function interface_exists;
-use function is_array;
-use function is_bool;
-use function is_int;
-use function is_iterable;
-use function is_object;
-use function is_string;
-use function preg_match;
-use function preg_split;
-use function sprintf;
-use function strpos;
 use ArrayAccess;
 use Countable;
-use DOMAttr;
 use DOMDocument;
 use DOMElement;
 use PHPUnit\Framework\Constraint\ArrayHasKey;
+use PHPUnit\Framework\Constraint\ArraySubset;
+use PHPUnit\Framework\Constraint\Attribute;
 use PHPUnit\Framework\Constraint\Callback;
 use PHPUnit\Framework\Constraint\ClassHasAttribute;
 use PHPUnit\Framework\Constraint\ClassHasStaticAttribute;
@@ -49,9 +28,6 @@ use PHPUnit\Framework\Constraint\GreaterThan;
 use PHPUnit\Framework\Constraint\IsAnything;
 use PHPUnit\Framework\Constraint\IsEmpty;
 use PHPUnit\Framework\Constraint\IsEqual;
-use PHPUnit\Framework\Constraint\IsEqualCanonicalizing;
-use PHPUnit\Framework\Constraint\IsEqualIgnoringCase;
-use PHPUnit\Framework\Constraint\IsEqualWithDelta;
 use PHPUnit\Framework\Constraint\IsFalse;
 use PHPUnit\Framework\Constraint\IsFinite;
 use PHPUnit\Framework\Constraint\IsIdentical;
@@ -70,7 +46,6 @@ use PHPUnit\Framework\Constraint\LogicalAnd;
 use PHPUnit\Framework\Constraint\LogicalNot;
 use PHPUnit\Framework\Constraint\LogicalOr;
 use PHPUnit\Framework\Constraint\LogicalXor;
-use PHPUnit\Framework\Constraint\ObjectEquals;
 use PHPUnit\Framework\Constraint\ObjectHasAttribute;
 use PHPUnit\Framework\Constraint\RegularExpression;
 use PHPUnit\Framework\Constraint\SameSize;
@@ -78,15 +53,19 @@ use PHPUnit\Framework\Constraint\StringContains;
 use PHPUnit\Framework\Constraint\StringEndsWith;
 use PHPUnit\Framework\Constraint\StringMatchesFormatDescription;
 use PHPUnit\Framework\Constraint\StringStartsWith;
-use PHPUnit\Framework\Constraint\TraversableContainsEqual;
-use PHPUnit\Framework\Constraint\TraversableContainsIdentical;
+use PHPUnit\Framework\Constraint\TraversableContains;
 use PHPUnit\Framework\Constraint\TraversableContainsOnly;
+use PHPUnit\Util\InvalidArgumentHelper;
 use PHPUnit\Util\Type;
 use PHPUnit\Util\Xml;
-use PHPUnit\Util\Xml\Loader as XmlLoader;
+use ReflectionClass;
+use ReflectionException;
+use ReflectionObject;
+use ReflectionProperty;
+use Traversable;
 
 /**
- * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ * A set of assertion methods.
  */
 abstract class Assert
 {
@@ -100,22 +79,22 @@ abstract class Assert
      *
      * @param int|string        $key
      * @param array|ArrayAccess $array
+     * @param string            $message
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertArrayHasKey($key, $array, string $message = ''): void
     {
-        if (!(is_int($key) || is_string($key))) {
-            throw InvalidArgumentException::create(
+        if (!(\is_int($key) || \is_string($key))) {
+            throw InvalidArgumentHelper::factory(
                 1,
                 'integer or string'
             );
         }
 
-        if (!(is_array($array) || $array instanceof ArrayAccess)) {
-            throw InvalidArgumentException::create(
+        if (!(\is_array($array) || $array instanceof ArrayAccess)) {
+            throw InvalidArgumentHelper::factory(
                 2,
                 'array or ArrayAccess'
             );
@@ -127,26 +106,58 @@ abstract class Assert
     }
 
     /**
+     * Asserts that an array has a specified subset.
+     *
+     * @param array|ArrayAccess $subset
+     * @param array|ArrayAccess $array
+     * @param bool              $strict  Check for object identity
+     * @param string            $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertArraySubset($subset, $array, bool $strict = false, string $message = ''): void
+    {
+        if (!(\is_array($subset) || $subset instanceof ArrayAccess)) {
+            throw InvalidArgumentHelper::factory(
+                1,
+                'array or ArrayAccess'
+            );
+        }
+
+        if (!(\is_array($array) || $array instanceof ArrayAccess)) {
+            throw InvalidArgumentHelper::factory(
+                2,
+                'array or ArrayAccess'
+            );
+        }
+
+        $constraint = new ArraySubset($subset, $strict);
+
+        static::assertThat($array, $constraint, $message);
+    }
+
+    /**
      * Asserts that an array does not have a specified key.
      *
      * @param int|string        $key
      * @param array|ArrayAccess $array
+     * @param string            $message
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertArrayNotHasKey($key, $array, string $message = ''): void
     {
-        if (!(is_int($key) || is_string($key))) {
-            throw InvalidArgumentException::create(
+        if (!(\is_int($key) || \is_string($key))) {
+            throw InvalidArgumentHelper::factory(
                 1,
                 'integer or string'
             );
         }
 
-        if (!(is_array($array) || $array instanceof ArrayAccess)) {
-            throw InvalidArgumentException::create(
+        if (!(\is_array($array) || $array instanceof ArrayAccess)) {
+            throw InvalidArgumentHelper::factory(
                 2,
                 'array or ArrayAccess'
             );
@@ -162,52 +173,159 @@ abstract class Assert
     /**
      * Asserts that a haystack contains a needle.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
+     * @param mixed  $needle
+     * @param mixed  $haystack
+     * @param string $message
+     * @param bool   $ignoreCase
+     * @param bool   $checkForObjectIdentity
+     * @param bool   $checkForNonObjectIdentity
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertContains($needle, iterable $haystack, string $message = ''): void
+    public static function assertContains($needle, $haystack, string $message = '', bool $ignoreCase = false, bool $checkForObjectIdentity = true, bool $checkForNonObjectIdentity = false): void
     {
-        $constraint = new TraversableContainsIdentical($needle);
+        if (\is_array($haystack) ||
+            (\is_object($haystack) && $haystack instanceof Traversable)) {
+            $constraint = new TraversableContains(
+                $needle,
+                $checkForObjectIdentity,
+                $checkForNonObjectIdentity
+            );
+        } elseif (\is_string($haystack)) {
+            if (!\is_string($needle)) {
+                throw InvalidArgumentHelper::factory(
+                    1,
+                    'string'
+                );
+            }
+
+            $constraint = new StringContains(
+                $needle,
+                $ignoreCase
+            );
+        } else {
+            throw InvalidArgumentHelper::factory(
+                2,
+                'array, traversable or string'
+            );
+        }
 
         static::assertThat($haystack, $constraint, $message);
     }
 
-    public static function assertContainsEquals($needle, iterable $haystack, string $message = ''): void
+    /**
+     * Asserts that a haystack that is stored in a static attribute of a class
+     * or an attribute of an object contains a needle.
+     *
+     * @param mixed         $needle
+     * @param string        $haystackAttributeName
+     * @param object|string $haystackClassOrObject
+     * @param string        $message
+     * @param bool          $ignoreCase
+     * @param bool          $checkForObjectIdentity
+     * @param bool          $checkForNonObjectIdentity
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeContains($needle, string $haystackAttributeName, $haystackClassOrObject, string $message = '', bool $ignoreCase = false, bool $checkForObjectIdentity = true, bool $checkForNonObjectIdentity = false): void
     {
-        $constraint = new TraversableContainsEqual($needle);
-
-        static::assertThat($haystack, $constraint, $message);
+        static::assertContains(
+            $needle,
+            static::readAttribute($haystackClassOrObject, $haystackAttributeName),
+            $message,
+            $ignoreCase,
+            $checkForObjectIdentity,
+            $checkForNonObjectIdentity
+        );
     }
 
     /**
      * Asserts that a haystack does not contain a needle.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
+     * @param mixed  $needle
+     * @param mixed  $haystack
+     * @param string $message
+     * @param bool   $ignoreCase
+     * @param bool   $checkForObjectIdentity
+     * @param bool   $checkForNonObjectIdentity
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertNotContains($needle, iterable $haystack, string $message = ''): void
+    public static function assertNotContains($needle, $haystack, string $message = '', bool $ignoreCase = false, bool $checkForObjectIdentity = true, bool $checkForNonObjectIdentity = false): void
     {
-        $constraint = new LogicalNot(
-            new TraversableContainsIdentical($needle)
-        );
+        if (\is_array($haystack) ||
+            (\is_object($haystack) && $haystack instanceof Traversable)) {
+            $constraint = new LogicalNot(
+                new TraversableContains(
+                    $needle,
+                    $checkForObjectIdentity,
+                    $checkForNonObjectIdentity
+                )
+            );
+        } elseif (\is_string($haystack)) {
+            if (!\is_string($needle)) {
+                throw InvalidArgumentHelper::factory(
+                    1,
+                    'string'
+                );
+            }
 
-        static::assertThat($haystack, $constraint, $message);
-    }
-
-    public static function assertNotContainsEquals($needle, iterable $haystack, string $message = ''): void
-    {
-        $constraint = new LogicalNot(new TraversableContainsEqual($needle));
+            $constraint = new LogicalNot(
+                new StringContains(
+                    $needle,
+                    $ignoreCase
+                )
+            );
+        } else {
+            throw InvalidArgumentHelper::factory(
+                2,
+                'array, traversable or string'
+            );
+        }
 
         static::assertThat($haystack, $constraint, $message);
     }
 
     /**
+     * Asserts that a haystack that is stored in a static attribute of a class
+     * or an attribute of an object does not contain a needle.
+     *
+     * @param mixed         $needle
+     * @param string        $haystackAttributeName
+     * @param object|string $haystackClassOrObject
+     * @param string        $message
+     * @param bool          $ignoreCase
+     * @param bool          $checkForObjectIdentity
+     * @param bool          $checkForNonObjectIdentity
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeNotContains($needle, string $haystackAttributeName, $haystackClassOrObject, string $message = '', bool $ignoreCase = false, bool $checkForObjectIdentity = true, bool $checkForNonObjectIdentity = false): void
+    {
+        static::assertNotContains(
+            $needle,
+            static::readAttribute($haystackClassOrObject, $haystackAttributeName),
+            $message,
+            $ignoreCase,
+            $checkForObjectIdentity,
+            $checkForNonObjectIdentity
+        );
+    }
+
+    /**
      * Asserts that a haystack contains only values of a given type.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string    $type
+     * @param iterable  $haystack
+     * @param null|bool $isNativeType
+     * @param string    $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertContainsOnly(string $type, iterable $haystack, ?bool $isNativeType = null, string $message = ''): void
     {
@@ -228,8 +346,12 @@ abstract class Assert
     /**
      * Asserts that a haystack contains only instances of a given class name.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string   $className
+     * @param iterable $haystack
+     * @param string   $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertContainsOnlyInstancesOf(string $className, iterable $haystack, string $message = ''): void
     {
@@ -244,10 +366,38 @@ abstract class Assert
     }
 
     /**
+     * Asserts that a haystack that is stored in a static attribute of a class
+     * or an attribute of an object contains only values of a given type.
+     *
+     * @param string        $type
+     * @param string        $haystackAttributeName
+     * @param object|string $haystackClassOrObject
+     * @param bool          $isNativeType
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeContainsOnly(string $type, string $haystackAttributeName, $haystackClassOrObject, ?bool $isNativeType = null, string $message = ''): void
+    {
+        static::assertContainsOnly(
+            $type,
+            static::readAttribute($haystackClassOrObject, $haystackAttributeName),
+            $isNativeType,
+            $message
+        );
+    }
+
+    /**
      * Asserts that a haystack does not contain only values of a given type.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string    $type
+     * @param iterable  $haystack
+     * @param null|bool $isNativeType
+     * @param string    $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNotContainsOnly(string $type, iterable $haystack, ?bool $isNativeType = null, string $message = ''): void
     {
@@ -268,18 +418,43 @@ abstract class Assert
     }
 
     /**
+     * Asserts that a haystack that is stored in a static attribute of a class
+     * or an attribute of an object does not contain only values of a given
+     * type.
+     *
+     * @param string        $type
+     * @param string        $haystackAttributeName
+     * @param object|string $haystackClassOrObject
+     * @param bool          $isNativeType
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeNotContainsOnly(string $type, string $haystackAttributeName, $haystackClassOrObject, ?bool $isNativeType = null, string $message = ''): void
+    {
+        static::assertNotContainsOnly(
+            $type,
+            static::readAttribute($haystackClassOrObject, $haystackAttributeName),
+            $isNativeType,
+            $message
+        );
+    }
+
+    /**
      * Asserts the number of elements of an array, Countable or Traversable.
      *
+     * @param int                $expectedCount
      * @param Countable|iterable $haystack
+     * @param string             $message
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertCount(int $expectedCount, $haystack, string $message = ''): void
     {
-        if (!$haystack instanceof Countable && !is_iterable($haystack)) {
-            throw InvalidArgumentException::create(2, 'countable or iterable');
+        if (!$haystack instanceof Countable && !\is_iterable($haystack)) {
+            throw InvalidArgumentHelper::factory(2, 'countable or iterable');
         }
 
         static::assertThat(
@@ -290,18 +465,40 @@ abstract class Assert
     }
 
     /**
+     * Asserts the number of elements of an array, Countable or Traversable
+     * that is stored in an attribute.
+     *
+     * @param int           $expectedCount
+     * @param string        $haystackAttributeName
+     * @param object|string $haystackClassOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeCount(int $expectedCount, string $haystackAttributeName, $haystackClassOrObject, string $message = ''): void
+    {
+        static::assertCount(
+            $expectedCount,
+            static::readAttribute($haystackClassOrObject, $haystackAttributeName),
+            $message
+        );
+    }
+
+    /**
      * Asserts the number of elements of an array, Countable or Traversable.
      *
+     * @param int                $expectedCount
      * @param Countable|iterable $haystack
+     * @param string             $message
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNotCount(int $expectedCount, $haystack, string $message = ''): void
     {
-        if (!$haystack instanceof Countable && !is_iterable($haystack)) {
-            throw InvalidArgumentException::create(2, 'countable or iterable');
+        if (!$haystack instanceof Countable && !\is_iterable($haystack)) {
+            throw InvalidArgumentHelper::factory(2, 'countable or iterable');
         }
 
         $constraint = new LogicalNot(
@@ -312,117 +509,104 @@ abstract class Assert
     }
 
     /**
+     * Asserts the number of elements of an array, Countable or Traversable
+     * that is stored in an attribute.
+     *
+     * @param int           $expectedCount
+     * @param string        $haystackAttributeName
+     * @param object|string $haystackClassOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeNotCount(int $expectedCount, string $haystackAttributeName, $haystackClassOrObject, string $message = ''): void
+    {
+        static::assertNotCount(
+            $expectedCount,
+            static::readAttribute($haystackClassOrObject, $haystackAttributeName),
+            $message
+        );
+    }
+
+    /**
      * Asserts that two variables are equal.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertEquals($expected, $actual, string $message = ''): void
-    {
-        $constraint = new IsEqual($expected);
-
-        static::assertThat($actual, $constraint, $message);
-    }
-
-    /**
-     * Asserts that two variables are equal (canonicalizing).
+     * @param mixed  $expected
+     * @param mixed  $actual
+     * @param string $message
+     * @param float  $delta
+     * @param int    $maxDepth
+     * @param bool   $canonicalize
+     * @param bool   $ignoreCase
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
-     */
-    public static function assertEqualsCanonicalizing($expected, $actual, string $message = ''): void
-    {
-        $constraint = new IsEqualCanonicalizing($expected);
-
-        static::assertThat($actual, $constraint, $message);
-    }
-
-    /**
-     * Asserts that two variables are equal (ignoring case).
-     *
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
      */
-    public static function assertEqualsIgnoringCase($expected, $actual, string $message = ''): void
+    public static function assertEquals($expected, $actual, string $message = '', float $delta = 0.0, int $maxDepth = 10, bool $canonicalize = false, bool $ignoreCase = false): void
     {
-        $constraint = new IsEqualIgnoringCase($expected);
-
-        static::assertThat($actual, $constraint, $message);
-    }
-
-    /**
-     * Asserts that two variables are equal (with delta).
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertEqualsWithDelta($expected, $actual, float $delta, string $message = ''): void
-    {
-        $constraint = new IsEqualWithDelta(
+        $constraint = new IsEqual(
             $expected,
-            $delta
+            $delta,
+            $maxDepth,
+            $canonicalize,
+            $ignoreCase
         );
 
         static::assertThat($actual, $constraint, $message);
+    }
+
+    /**
+     * Asserts that a variable is equal to an attribute of an object.
+     *
+     * @param mixed         $expected
+     * @param string        $actualAttributeName
+     * @param object|string $actualClassOrObject
+     * @param string        $message
+     * @param float         $delta
+     * @param int           $maxDepth
+     * @param bool          $canonicalize
+     * @param bool          $ignoreCase
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeEquals($expected, string $actualAttributeName, $actualClassOrObject, string $message = '', float $delta = 0.0, int $maxDepth = 10, bool $canonicalize = false, bool $ignoreCase = false): void
+    {
+        static::assertEquals(
+            $expected,
+            static::readAttribute($actualClassOrObject, $actualAttributeName),
+            $message,
+            $delta,
+            $maxDepth,
+            $canonicalize,
+            $ignoreCase
+        );
     }
 
     /**
      * Asserts that two variables are not equal.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertNotEquals($expected, $actual, string $message = ''): void
-    {
-        $constraint = new LogicalNot(
-            new IsEqual($expected)
-        );
-
-        static::assertThat($actual, $constraint, $message);
-    }
-
-    /**
-     * Asserts that two variables are not equal (canonicalizing).
+     * @param mixed  $expected
+     * @param mixed  $actual
+     * @param string $message
+     * @param float  $delta
+     * @param int    $maxDepth
+     * @param bool   $canonicalize
+     * @param bool   $ignoreCase
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertNotEqualsCanonicalizing($expected, $actual, string $message = ''): void
+    public static function assertNotEquals($expected, $actual, string $message = '', $delta = 0.0, $maxDepth = 10, $canonicalize = false, $ignoreCase = false): void
     {
         $constraint = new LogicalNot(
-            new IsEqualCanonicalizing($expected)
-        );
-
-        static::assertThat($actual, $constraint, $message);
-    }
-
-    /**
-     * Asserts that two variables are not equal (ignoring case).
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertNotEqualsIgnoringCase($expected, $actual, string $message = ''): void
-    {
-        $constraint = new LogicalNot(
-            new IsEqualIgnoringCase($expected)
-        );
-
-        static::assertThat($actual, $constraint, $message);
-    }
-
-    /**
-     * Asserts that two variables are not equal (with delta).
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertNotEqualsWithDelta($expected, $actual, float $delta, string $message = ''): void
-    {
-        $constraint = new LogicalNot(
-            new IsEqualWithDelta(
+            new IsEqual(
                 $expected,
-                $delta
+                $delta,
+                $maxDepth,
+                $canonicalize,
+                $ignoreCase
             )
         );
 
@@ -430,24 +614,41 @@ abstract class Assert
     }
 
     /**
+     * Asserts that a variable is not equal to an attribute of an object.
+     *
+     * @param mixed         $expected
+     * @param string        $actualAttributeName
+     * @param object|string $actualClassOrObject
+     * @param string        $message
+     * @param float         $delta
+     * @param int           $maxDepth
+     * @param bool          $canonicalize
+     * @param bool          $ignoreCase
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertObjectEquals(object $expected, object $actual, string $method = 'equals', string $message = ''): void
+    public static function assertAttributeNotEquals($expected, string $actualAttributeName, $actualClassOrObject, string $message = '', float $delta = 0.0, int $maxDepth = 10, bool $canonicalize = false, bool $ignoreCase = false): void
     {
-        static::assertThat(
-            $actual,
-            static::objectEquals($expected, $method),
-            $message
+        static::assertNotEquals(
+            $expected,
+            static::readAttribute($actualClassOrObject, $actualAttributeName),
+            $message,
+            $delta,
+            $maxDepth,
+            $canonicalize,
+            $ignoreCase
         );
     }
 
     /**
      * Asserts that a variable is empty.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
+     * @param mixed  $actual
+     * @param string $message
      *
-     * @psalm-assert empty $actual
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertEmpty($actual, string $message = ''): void
     {
@@ -455,12 +656,32 @@ abstract class Assert
     }
 
     /**
+     * Asserts that a static attribute of a class or an attribute of an object
+     * is empty.
+     *
+     * @param string        $haystackAttributeName
+     * @param object|string $haystackClassOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeEmpty(string $haystackAttributeName, $haystackClassOrObject, string $message = ''): void
+    {
+        static::assertEmpty(
+            static::readAttribute($haystackClassOrObject, $haystackAttributeName),
+            $message
+        );
+    }
+
+    /**
      * Asserts that a variable is not empty.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
+     * @param mixed  $actual
+     * @param string $message
      *
-     * @psalm-assert !empty $actual
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNotEmpty($actual, string $message = ''): void
     {
@@ -468,10 +689,33 @@ abstract class Assert
     }
 
     /**
+     * Asserts that a static attribute of a class or an attribute of an object
+     * is not empty.
+     *
+     * @param string        $haystackAttributeName
+     * @param object|string $haystackClassOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeNotEmpty(string $haystackAttributeName, $haystackClassOrObject, string $message = ''): void
+    {
+        static::assertNotEmpty(
+            static::readAttribute($haystackClassOrObject, $haystackAttributeName),
+            $message
+        );
+    }
+
+    /**
      * Asserts that a value is greater than another value.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param mixed  $expected
+     * @param mixed  $actual
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertGreaterThan($expected, $actual, string $message = ''): void
     {
@@ -479,10 +723,34 @@ abstract class Assert
     }
 
     /**
+     * Asserts that an attribute is greater than another value.
+     *
+     * @param mixed         $expected
+     * @param string        $actualAttributeName
+     * @param object|string $actualClassOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeGreaterThan($expected, string $actualAttributeName, $actualClassOrObject, string $message = ''): void
+    {
+        static::assertGreaterThan(
+            $expected,
+            static::readAttribute($actualClassOrObject, $actualAttributeName),
+            $message
+        );
+    }
+
+    /**
      * Asserts that a value is greater than or equal to another value.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param mixed  $expected
+     * @param mixed  $actual
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertGreaterThanOrEqual($expected, $actual, string $message = ''): void
     {
@@ -494,10 +762,34 @@ abstract class Assert
     }
 
     /**
+     * Asserts that an attribute is greater than or equal to another value.
+     *
+     * @param mixed         $expected
+     * @param string        $actualAttributeName
+     * @param object|string $actualClassOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeGreaterThanOrEqual($expected, string $actualAttributeName, $actualClassOrObject, string $message = ''): void
+    {
+        static::assertGreaterThanOrEqual(
+            $expected,
+            static::readAttribute($actualClassOrObject, $actualAttributeName),
+            $message
+        );
+    }
+
+    /**
      * Asserts that a value is smaller than another value.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param mixed  $expected
+     * @param mixed  $actual
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertLessThan($expected, $actual, string $message = ''): void
     {
@@ -505,10 +797,34 @@ abstract class Assert
     }
 
     /**
+     * Asserts that an attribute is smaller than another value.
+     *
+     * @param mixed         $expected
+     * @param string        $actualAttributeName
+     * @param object|string $actualClassOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeLessThan($expected, string $actualAttributeName, $actualClassOrObject, string $message = ''): void
+    {
+        static::assertLessThan(
+            $expected,
+            static::readAttribute($actualClassOrObject, $actualAttributeName),
+            $message
+        );
+    }
+
+    /**
      * Asserts that a value is smaller than or equal to another value.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param mixed  $expected
+     * @param mixed  $actual
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertLessThanOrEqual($expected, $actual, string $message = ''): void
     {
@@ -516,222 +832,148 @@ abstract class Assert
     }
 
     /**
+     * Asserts that an attribute is smaller than or equal to another value.
+     *
+     * @param mixed         $expected
+     * @param string        $actualAttributeName
+     * @param object|string $actualClassOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeLessThanOrEqual($expected, string $actualAttributeName, $actualClassOrObject, string $message = ''): void
+    {
+        static::assertLessThanOrEqual(
+            $expected,
+            static::readAttribute($actualClassOrObject, $actualAttributeName),
+            $message
+        );
+    }
+
+    /**
      * Asserts that the contents of one file is equal to the contents of another
      * file.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertFileEquals(string $expected, string $actual, string $message = ''): void
-    {
-        static::assertFileExists($expected, $message);
-        static::assertFileExists($actual, $message);
-
-        $constraint = new IsEqual(file_get_contents($expected));
-
-        static::assertThat(file_get_contents($actual), $constraint, $message);
-    }
-
-    /**
-     * Asserts that the contents of one file is equal to the contents of another
-     * file (canonicalizing).
+     * @param string $expected
+     * @param string $actual
+     * @param string $message
+     * @param bool   $canonicalize
+     * @param bool   $ignoreCase
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertFileEqualsCanonicalizing(string $expected, string $actual, string $message = ''): void
+    public static function assertFileEquals(string $expected, string $actual, string $message = '', bool $canonicalize = false, bool $ignoreCase = false): void
     {
         static::assertFileExists($expected, $message);
         static::assertFileExists($actual, $message);
 
-        $constraint = new IsEqualCanonicalizing(
-            file_get_contents($expected)
+        static::assertEquals(
+            \file_get_contents($expected),
+            \file_get_contents($actual),
+            $message,
+            0,
+            10,
+            $canonicalize,
+            $ignoreCase
         );
-
-        static::assertThat(file_get_contents($actual), $constraint, $message);
-    }
-
-    /**
-     * Asserts that the contents of one file is equal to the contents of another
-     * file (ignoring case).
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertFileEqualsIgnoringCase(string $expected, string $actual, string $message = ''): void
-    {
-        static::assertFileExists($expected, $message);
-        static::assertFileExists($actual, $message);
-
-        $constraint = new IsEqualIgnoringCase(file_get_contents($expected));
-
-        static::assertThat(file_get_contents($actual), $constraint, $message);
     }
 
     /**
      * Asserts that the contents of one file is not equal to the contents of
      * another file.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertFileNotEquals(string $expected, string $actual, string $message = ''): void
-    {
-        static::assertFileExists($expected, $message);
-        static::assertFileExists($actual, $message);
-
-        $constraint = new LogicalNot(
-            new IsEqual(file_get_contents($expected))
-        );
-
-        static::assertThat(file_get_contents($actual), $constraint, $message);
-    }
-
-    /**
-     * Asserts that the contents of one file is not equal to the contents of another
-     * file (canonicalizing).
+     * @param string $expected
+     * @param string $actual
+     * @param string $message
+     * @param bool   $canonicalize
+     * @param bool   $ignoreCase
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertFileNotEqualsCanonicalizing(string $expected, string $actual, string $message = ''): void
+    public static function assertFileNotEquals(string $expected, string $actual, string $message = '', bool $canonicalize = false, bool $ignoreCase = false): void
     {
         static::assertFileExists($expected, $message);
         static::assertFileExists($actual, $message);
 
-        $constraint = new LogicalNot(
-            new IsEqualCanonicalizing(file_get_contents($expected))
+        static::assertNotEquals(
+            \file_get_contents($expected),
+            \file_get_contents($actual),
+            $message,
+            0,
+            10,
+            $canonicalize,
+            $ignoreCase
         );
-
-        static::assertThat(file_get_contents($actual), $constraint, $message);
-    }
-
-    /**
-     * Asserts that the contents of one file is not equal to the contents of another
-     * file (ignoring case).
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertFileNotEqualsIgnoringCase(string $expected, string $actual, string $message = ''): void
-    {
-        static::assertFileExists($expected, $message);
-        static::assertFileExists($actual, $message);
-
-        $constraint = new LogicalNot(
-            new IsEqualIgnoringCase(file_get_contents($expected))
-        );
-
-        static::assertThat(file_get_contents($actual), $constraint, $message);
     }
 
     /**
      * Asserts that the contents of a string is equal
      * to the contents of a file.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertStringEqualsFile(string $expectedFile, string $actualString, string $message = ''): void
-    {
-        static::assertFileExists($expectedFile, $message);
-
-        $constraint = new IsEqual(file_get_contents($expectedFile));
-
-        static::assertThat($actualString, $constraint, $message);
-    }
-
-    /**
-     * Asserts that the contents of a string is equal
-     * to the contents of a file (canonicalizing).
+     * @param string $expectedFile
+     * @param string $actualString
+     * @param string $message
+     * @param bool   $canonicalize
+     * @param bool   $ignoreCase
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertStringEqualsFileCanonicalizing(string $expectedFile, string $actualString, string $message = ''): void
+    public static function assertStringEqualsFile(string $expectedFile, string $actualString, string $message = '', bool $canonicalize = false, bool $ignoreCase = false): void
     {
         static::assertFileExists($expectedFile, $message);
 
-        $constraint = new IsEqualCanonicalizing(file_get_contents($expectedFile));
-
-        static::assertThat($actualString, $constraint, $message);
-    }
-
-    /**
-     * Asserts that the contents of a string is equal
-     * to the contents of a file (ignoring case).
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertStringEqualsFileIgnoringCase(string $expectedFile, string $actualString, string $message = ''): void
-    {
-        static::assertFileExists($expectedFile, $message);
-
-        $constraint = new IsEqualIgnoringCase(file_get_contents($expectedFile));
-
-        static::assertThat($actualString, $constraint, $message);
+        /** @noinspection PhpUnitTestsInspection */
+        static::assertEquals(
+            \file_get_contents($expectedFile),
+            $actualString,
+            $message,
+            0,
+            10,
+            $canonicalize,
+            $ignoreCase
+        );
     }
 
     /**
      * Asserts that the contents of a string is not equal
      * to the contents of a file.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertStringNotEqualsFile(string $expectedFile, string $actualString, string $message = ''): void
-    {
-        static::assertFileExists($expectedFile, $message);
-
-        $constraint = new LogicalNot(
-            new IsEqual(file_get_contents($expectedFile))
-        );
-
-        static::assertThat($actualString, $constraint, $message);
-    }
-
-    /**
-     * Asserts that the contents of a string is not equal
-     * to the contents of a file (canonicalizing).
+     * @param string $expectedFile
+     * @param string $actualString
+     * @param string $message
+     * @param bool   $canonicalize
+     * @param bool   $ignoreCase
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertStringNotEqualsFileCanonicalizing(string $expectedFile, string $actualString, string $message = ''): void
+    public static function assertStringNotEqualsFile(string $expectedFile, string $actualString, string $message = '', bool $canonicalize = false, bool $ignoreCase = false): void
     {
         static::assertFileExists($expectedFile, $message);
 
-        $constraint = new LogicalNot(
-            new IsEqualCanonicalizing(file_get_contents($expectedFile))
+        static::assertNotEquals(
+            \file_get_contents($expectedFile),
+            $actualString,
+            $message,
+            0,
+            10,
+            $canonicalize,
+            $ignoreCase
         );
-
-        static::assertThat($actualString, $constraint, $message);
-    }
-
-    /**
-     * Asserts that the contents of a string is not equal
-     * to the contents of a file (ignoring case).
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertStringNotEqualsFileIgnoringCase(string $expectedFile, string $actualString, string $message = ''): void
-    {
-        static::assertFileExists($expectedFile, $message);
-
-        $constraint = new LogicalNot(
-            new IsEqualIgnoringCase(file_get_contents($expectedFile))
-        );
-
-        static::assertThat($actualString, $constraint, $message);
     }
 
     /**
      * Asserts that a file/dir is readable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $filename
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertIsReadable(string $filename, string $message = ''): void
     {
@@ -741,36 +983,25 @@ abstract class Assert
     /**
      * Asserts that a file/dir exists and is not readable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $filename
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     */
-    public static function assertIsNotReadable(string $filename, string $message = ''): void
-    {
-        static::assertThat($filename, new LogicalNot(new IsReadable), $message);
-    }
-
-    /**
-     * Asserts that a file/dir exists and is not readable.
-     *
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4062
      */
     public static function assertNotIsReadable(string $filename, string $message = ''): void
     {
-        self::createWarning('assertNotIsReadable() is deprecated and will be removed in PHPUnit 10. Refactor your code to use assertIsNotReadable() instead.');
-
         static::assertThat($filename, new LogicalNot(new IsReadable), $message);
     }
 
     /**
      * Asserts that a file/dir exists and is writable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $filename
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertIsWritable(string $filename, string $message = ''): void
     {
@@ -780,36 +1011,25 @@ abstract class Assert
     /**
      * Asserts that a file/dir exists and is not writable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $filename
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     */
-    public static function assertIsNotWritable(string $filename, string $message = ''): void
-    {
-        static::assertThat($filename, new LogicalNot(new IsWritable), $message);
-    }
-
-    /**
-     * Asserts that a file/dir exists and is not writable.
-     *
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4065
      */
     public static function assertNotIsWritable(string $filename, string $message = ''): void
     {
-        self::createWarning('assertNotIsWritable() is deprecated and will be removed in PHPUnit 10. Refactor your code to use assertIsNotWritable() instead.');
-
         static::assertThat($filename, new LogicalNot(new IsWritable), $message);
     }
 
     /**
      * Asserts that a directory exists.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $directory
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertDirectoryExists(string $directory, string $message = ''): void
     {
@@ -819,36 +1039,25 @@ abstract class Assert
     /**
      * Asserts that a directory does not exist.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $directory
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     */
-    public static function assertDirectoryDoesNotExist(string $directory, string $message = ''): void
-    {
-        static::assertThat($directory, new LogicalNot(new DirectoryExists), $message);
-    }
-
-    /**
-     * Asserts that a directory does not exist.
-     *
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4068
      */
     public static function assertDirectoryNotExists(string $directory, string $message = ''): void
     {
-        self::createWarning('assertDirectoryNotExists() is deprecated and will be removed in PHPUnit 10. Refactor your code to use assertDirectoryDoesNotExist() instead.');
-
         static::assertThat($directory, new LogicalNot(new DirectoryExists), $message);
     }
 
     /**
      * Asserts that a directory exists and is readable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $directory
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertDirectoryIsReadable(string $directory, string $message = ''): void
     {
@@ -859,38 +1068,26 @@ abstract class Assert
     /**
      * Asserts that a directory exists and is not readable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $directory
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     */
-    public static function assertDirectoryIsNotReadable(string $directory, string $message = ''): void
-    {
-        self::assertDirectoryExists($directory, $message);
-        self::assertIsNotReadable($directory, $message);
-    }
-
-    /**
-     * Asserts that a directory exists and is not readable.
-     *
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4071
      */
     public static function assertDirectoryNotIsReadable(string $directory, string $message = ''): void
     {
-        self::createWarning('assertDirectoryNotIsReadable() is deprecated and will be removed in PHPUnit 10. Refactor your code to use assertDirectoryIsNotReadable() instead.');
-
         self::assertDirectoryExists($directory, $message);
-        self::assertIsNotReadable($directory, $message);
+        self::assertNotIsReadable($directory, $message);
     }
 
     /**
      * Asserts that a directory exists and is writable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $directory
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertDirectoryIsWritable(string $directory, string $message = ''): void
     {
@@ -901,38 +1098,26 @@ abstract class Assert
     /**
      * Asserts that a directory exists and is not writable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $directory
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     */
-    public static function assertDirectoryIsNotWritable(string $directory, string $message = ''): void
-    {
-        self::assertDirectoryExists($directory, $message);
-        self::assertIsNotWritable($directory, $message);
-    }
-
-    /**
-     * Asserts that a directory exists and is not writable.
-     *
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4074
      */
     public static function assertDirectoryNotIsWritable(string $directory, string $message = ''): void
     {
-        self::createWarning('assertDirectoryNotIsWritable() is deprecated and will be removed in PHPUnit 10. Refactor your code to use assertDirectoryIsNotWritable() instead.');
-
         self::assertDirectoryExists($directory, $message);
-        self::assertIsNotWritable($directory, $message);
+        self::assertNotIsWritable($directory, $message);
     }
 
     /**
      * Asserts that a file exists.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $filename
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertFileExists(string $filename, string $message = ''): void
     {
@@ -942,36 +1127,25 @@ abstract class Assert
     /**
      * Asserts that a file does not exist.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $filename
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     */
-    public static function assertFileDoesNotExist(string $filename, string $message = ''): void
-    {
-        static::assertThat($filename, new LogicalNot(new FileExists), $message);
-    }
-
-    /**
-     * Asserts that a file does not exist.
-     *
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4077
      */
     public static function assertFileNotExists(string $filename, string $message = ''): void
     {
-        self::createWarning('assertFileNotExists() is deprecated and will be removed in PHPUnit 10. Refactor your code to use assertFileDoesNotExist() instead.');
-
         static::assertThat($filename, new LogicalNot(new FileExists), $message);
     }
 
     /**
      * Asserts that a file exists and is readable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $file
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertFileIsReadable(string $file, string $message = ''): void
     {
@@ -982,38 +1156,26 @@ abstract class Assert
     /**
      * Asserts that a file exists and is not readable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $file
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     */
-    public static function assertFileIsNotReadable(string $file, string $message = ''): void
-    {
-        self::assertFileExists($file, $message);
-        self::assertIsNotReadable($file, $message);
-    }
-
-    /**
-     * Asserts that a file exists and is not readable.
-     *
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4080
      */
     public static function assertFileNotIsReadable(string $file, string $message = ''): void
     {
-        self::createWarning('assertFileNotIsReadable() is deprecated and will be removed in PHPUnit 10. Refactor your code to use assertFileIsNotReadable() instead.');
-
         self::assertFileExists($file, $message);
-        self::assertIsNotReadable($file, $message);
+        self::assertNotIsReadable($file, $message);
     }
 
     /**
      * Asserts that a file exists and is writable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $file
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertFileIsWritable(string $file, string $message = ''): void
     {
@@ -1024,40 +1186,26 @@ abstract class Assert
     /**
      * Asserts that a file exists and is not writable.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $file
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     */
-    public static function assertFileIsNotWritable(string $file, string $message = ''): void
-    {
-        self::assertFileExists($file, $message);
-        self::assertIsNotWritable($file, $message);
-    }
-
-    /**
-     * Asserts that a file exists and is not writable.
-     *
      * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4083
      */
     public static function assertFileNotIsWritable(string $file, string $message = ''): void
     {
-        self::createWarning('assertFileNotIsWritable() is deprecated and will be removed in PHPUnit 10. Refactor your code to use assertFileIsNotWritable() instead.');
-
         self::assertFileExists($file, $message);
-        self::assertIsNotWritable($file, $message);
+        self::assertNotIsWritable($file, $message);
     }
 
     /**
      * Asserts that a condition is true.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
+     * @param mixed  $condition
+     * @param string $message
      *
-     * @psalm-assert true $condition
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertTrue($condition, string $message = ''): void
     {
@@ -1067,10 +1215,11 @@ abstract class Assert
     /**
      * Asserts that a condition is not true.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
+     * @param mixed  $condition
+     * @param string $message
      *
-     * @psalm-assert !true $condition
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNotTrue($condition, string $message = ''): void
     {
@@ -1080,10 +1229,11 @@ abstract class Assert
     /**
      * Asserts that a condition is false.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
+     * @param mixed  $condition
+     * @param string $message
      *
-     * @psalm-assert false $condition
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertFalse($condition, string $message = ''): void
     {
@@ -1093,10 +1243,11 @@ abstract class Assert
     /**
      * Asserts that a condition is not false.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
+     * @param mixed  $condition
+     * @param string $message
      *
-     * @psalm-assert !false $condition
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNotFalse($condition, string $message = ''): void
     {
@@ -1106,10 +1257,11 @@ abstract class Assert
     /**
      * Asserts that a variable is null.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
+     * @param mixed  $actual
+     * @param string $message
      *
-     * @psalm-assert null $actual
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNull($actual, string $message = ''): void
     {
@@ -1119,10 +1271,11 @@ abstract class Assert
     /**
      * Asserts that a variable is not null.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
+     * @param mixed  $actual
+     * @param string $message
      *
-     * @psalm-assert !null $actual
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNotNull($actual, string $message = ''): void
     {
@@ -1132,8 +1285,11 @@ abstract class Assert
     /**
      * Asserts that a variable is finite.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param mixed  $actual
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertFinite($actual, string $message = ''): void
     {
@@ -1143,8 +1299,11 @@ abstract class Assert
     /**
      * Asserts that a variable is infinite.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param mixed  $actual
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertInfinite($actual, string $message = ''): void
     {
@@ -1154,8 +1313,11 @@ abstract class Assert
     /**
      * Asserts that a variable is nan.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param mixed  $actual
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNan($actual, string $message = ''): void
     {
@@ -1165,18 +1327,21 @@ abstract class Assert
     /**
      * Asserts that a class has a specified attribute.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
+     * @param string $attributeName
+     * @param string $className
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertClassHasAttribute(string $attributeName, string $className, string $message = ''): void
     {
-        if (!self::isValidClassAttributeName($attributeName)) {
-            throw InvalidArgumentException::create(1, 'valid attribute name');
+        if (!self::isValidAttributeName($attributeName)) {
+            throw InvalidArgumentHelper::factory(1, 'valid attribute name');
         }
 
-        if (!class_exists($className)) {
-            throw InvalidArgumentException::create(2, 'class name');
+        if (!\class_exists($className)) {
+            throw InvalidArgumentHelper::factory(2, 'class name', $className);
         }
 
         static::assertThat($className, new ClassHasAttribute($attributeName), $message);
@@ -1185,18 +1350,21 @@ abstract class Assert
     /**
      * Asserts that a class does not have a specified attribute.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
+     * @param string $attributeName
+     * @param string $className
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertClassNotHasAttribute(string $attributeName, string $className, string $message = ''): void
     {
-        if (!self::isValidClassAttributeName($attributeName)) {
-            throw InvalidArgumentException::create(1, 'valid attribute name');
+        if (!self::isValidAttributeName($attributeName)) {
+            throw InvalidArgumentHelper::factory(1, 'valid attribute name');
         }
 
-        if (!class_exists($className)) {
-            throw InvalidArgumentException::create(2, 'class name');
+        if (!\class_exists($className)) {
+            throw InvalidArgumentHelper::factory(2, 'class name', $className);
         }
 
         static::assertThat(
@@ -1211,18 +1379,21 @@ abstract class Assert
     /**
      * Asserts that a class has a specified static attribute.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
+     * @param string $attributeName
+     * @param string $className
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertClassHasStaticAttribute(string $attributeName, string $className, string $message = ''): void
     {
-        if (!self::isValidClassAttributeName($attributeName)) {
-            throw InvalidArgumentException::create(1, 'valid attribute name');
+        if (!self::isValidAttributeName($attributeName)) {
+            throw InvalidArgumentHelper::factory(1, 'valid attribute name');
         }
 
-        if (!class_exists($className)) {
-            throw InvalidArgumentException::create(2, 'class name');
+        if (!\class_exists($className)) {
+            throw InvalidArgumentHelper::factory(2, 'class name', $className);
         }
 
         static::assertThat(
@@ -1235,18 +1406,21 @@ abstract class Assert
     /**
      * Asserts that a class does not have a specified static attribute.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
+     * @param string $attributeName
+     * @param string $className
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertClassNotHasStaticAttribute(string $attributeName, string $className, string $message = ''): void
     {
-        if (!self::isValidClassAttributeName($attributeName)) {
-            throw InvalidArgumentException::create(1, 'valid attribute name');
+        if (!self::isValidAttributeName($attributeName)) {
+            throw InvalidArgumentHelper::factory(1, 'valid attribute name');
         }
 
-        if (!class_exists($className)) {
-            throw InvalidArgumentException::create(2, 'class name');
+        if (!\class_exists($className)) {
+            throw InvalidArgumentHelper::factory(2, 'class name', $className);
         }
 
         static::assertThat(
@@ -1261,20 +1435,21 @@ abstract class Assert
     /**
      * Asserts that an object has a specified attribute.
      *
+     * @param string $attributeName
      * @param object $object
+     * @param string $message
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertObjectHasAttribute(string $attributeName, $object, string $message = ''): void
     {
-        if (!self::isValidObjectAttributeName($attributeName)) {
-            throw InvalidArgumentException::create(1, 'valid attribute name');
+        if (!self::isValidAttributeName($attributeName)) {
+            throw InvalidArgumentHelper::factory(1, 'valid attribute name');
         }
 
-        if (!is_object($object)) {
-            throw InvalidArgumentException::create(2, 'object');
+        if (!\is_object($object)) {
+            throw InvalidArgumentHelper::factory(2, 'object');
         }
 
         static::assertThat(
@@ -1287,20 +1462,21 @@ abstract class Assert
     /**
      * Asserts that an object does not have a specified attribute.
      *
+     * @param string $attributeName
      * @param object $object
+     * @param string $message
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertObjectNotHasAttribute(string $attributeName, $object, string $message = ''): void
     {
-        if (!self::isValidObjectAttributeName($attributeName)) {
-            throw InvalidArgumentException::create(1, 'valid attribute name');
+        if (!self::isValidAttributeName($attributeName)) {
+            throw InvalidArgumentHelper::factory(1, 'valid attribute name');
         }
 
-        if (!is_object($object)) {
-            throw InvalidArgumentException::create(2, 'object');
+        if (!\is_object($object)) {
+            throw InvalidArgumentHelper::factory(2, 'object');
         }
 
         static::assertThat(
@@ -1317,18 +1493,43 @@ abstract class Assert
      * Used on objects, it asserts that two variables reference
      * the same object.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
+     * @param mixed  $expected
+     * @param mixed  $actual
+     * @param string $message
      *
-     * @psalm-template ExpectedType
-     * @psalm-param ExpectedType $expected
-     * @psalm-assert =ExpectedType $actual
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertSame($expected, $actual, string $message = ''): void
     {
+        if (\is_bool($expected) && \is_bool($actual)) {
+            static::assertEquals($expected, $actual, $message);
+        }
+
         static::assertThat(
             $actual,
             new IsIdentical($expected),
+            $message
+        );
+    }
+
+    /**
+     * Asserts that a variable and an attribute of an object have the same type
+     * and value.
+     *
+     * @param mixed         $expected
+     * @param string        $actualAttributeName
+     * @param object|string $actualClassOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeSame($expected, string $actualAttributeName, $actualClassOrObject, string $message = ''): void
+    {
+        static::assertSame(
+            $expected,
+            static::readAttribute($actualClassOrObject, $actualAttributeName),
             $message
         );
     }
@@ -1338,12 +1539,16 @@ abstract class Assert
      * Used on objects, it asserts that two variables do not reference
      * the same object.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param mixed  $expected
+     * @param mixed  $actual
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNotSame($expected, $actual, string $message = ''): void
     {
-        if (is_bool($expected) && is_bool($actual)) {
+        if (\is_bool($expected) && \is_bool($actual)) {
             static::assertNotEquals($expected, $actual, $message);
         }
 
@@ -1357,20 +1562,40 @@ abstract class Assert
     }
 
     /**
+     * Asserts that a variable and an attribute of an object do not have the
+     * same type and value.
+     *
+     * @param mixed         $expected
+     * @param string        $actualAttributeName
+     * @param object|string $actualClassOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeNotSame($expected, string $actualAttributeName, $actualClassOrObject, string $message = ''): void
+    {
+        static::assertNotSame(
+            $expected,
+            static::readAttribute($actualClassOrObject, $actualAttributeName),
+            $message
+        );
+    }
+
+    /**
      * Asserts that a variable is of a given type.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
-     * @throws ExpectationFailedException
+     * @param string $expected
+     * @param mixed  $actual
+     * @param string $message
      *
-     * @psalm-template ExpectedType of object
-     * @psalm-param class-string<ExpectedType> $expected
-     * @psalm-assert =ExpectedType $actual
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertInstanceOf(string $expected, $actual, string $message = ''): void
     {
-        if (!class_exists($expected) && !interface_exists($expected)) {
-            throw InvalidArgumentException::create(1, 'class or interface name');
+        if (!\class_exists($expected) && !\interface_exists($expected)) {
+            throw InvalidArgumentHelper::factory(1, 'class or interface name');
         }
 
         static::assertThat(
@@ -1381,20 +1606,39 @@ abstract class Assert
     }
 
     /**
+     * Asserts that an attribute is of a given type.
+     *
+     * @param string        $expected
+     * @param string        $attributeName
+     * @param object|string $classOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeInstanceOf(string $expected, string $attributeName, $classOrObject, string $message = ''): void
+    {
+        static::assertInstanceOf(
+            $expected,
+            static::readAttribute($classOrObject, $attributeName),
+            $message
+        );
+    }
+
+    /**
      * Asserts that a variable is not of a given type.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
-     * @throws ExpectationFailedException
+     * @param string $expected
+     * @param mixed  $actual
+     * @param string $message
      *
-     * @psalm-template ExpectedType of object
-     * @psalm-param class-string<ExpectedType> $expected
-     * @psalm-assert !ExpectedType $actual
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNotInstanceOf(string $expected, $actual, string $message = ''): void
     {
-        if (!class_exists($expected) && !interface_exists($expected)) {
-            throw InvalidArgumentException::create(1, 'class or interface name');
+        if (!\class_exists($expected) && !\interface_exists($expected)) {
+            throw InvalidArgumentHelper::factory(1, 'class or interface name');
         }
 
         static::assertThat(
@@ -1407,472 +1651,132 @@ abstract class Assert
     }
 
     /**
-     * Asserts that a variable is of type array.
+     * Asserts that an attribute is of a given type.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string        $expected
+     * @param string        $attributeName
+     * @param object|string $classOrObject
+     * @param string        $message
+     *
      * @throws ExpectationFailedException
-     *
-     * @psalm-assert array $actual
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertIsArray($actual, string $message = ''): void
+    public static function assertAttributeNotInstanceOf(string $expected, string $attributeName, $classOrObject, string $message = ''): void
     {
-        static::assertThat(
-            $actual,
-            new IsType(IsType::TYPE_ARRAY),
+        static::assertNotInstanceOf(
+            $expected,
+            static::readAttribute($classOrObject, $attributeName),
             $message
         );
     }
 
     /**
-     * Asserts that a variable is of type bool.
+     * Asserts that a variable is of a given type.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $expected
+     * @param mixed  $actual
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     *
-     * @psalm-assert bool $actual
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertIsBool($actual, string $message = ''): void
+    public static function assertInternalType(string $expected, $actual, string $message = ''): void
     {
         static::assertThat(
             $actual,
-            new IsType(IsType::TYPE_BOOL),
+            new IsType($expected),
             $message
         );
     }
 
     /**
-     * Asserts that a variable is of type float.
+     * Asserts that an attribute is of a given type.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string        $expected
+     * @param string        $attributeName
+     * @param object|string $classOrObject
+     * @param string        $message
+     *
      * @throws ExpectationFailedException
-     *
-     * @psalm-assert float $actual
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertIsFloat($actual, string $message = ''): void
+    public static function assertAttributeInternalType(string $expected, string $attributeName, $classOrObject, string $message = ''): void
     {
-        static::assertThat(
-            $actual,
-            new IsType(IsType::TYPE_FLOAT),
+        static::assertInternalType(
+            $expected,
+            static::readAttribute($classOrObject, $attributeName),
             $message
         );
     }
 
     /**
-     * Asserts that a variable is of type int.
+     * Asserts that a variable is not of a given type.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $expected
+     * @param mixed  $actual
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     *
-     * @psalm-assert int $actual
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
-    public static function assertIsInt($actual, string $message = ''): void
+    public static function assertNotInternalType(string $expected, $actual, string $message = ''): void
     {
         static::assertThat(
             $actual,
-            new IsType(IsType::TYPE_INT),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is of type numeric.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert numeric $actual
-     */
-    public static function assertIsNumeric($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new IsType(IsType::TYPE_NUMERIC),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is of type object.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert object $actual
-     */
-    public static function assertIsObject($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new IsType(IsType::TYPE_OBJECT),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is of type resource.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert resource $actual
-     */
-    public static function assertIsResource($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new IsType(IsType::TYPE_RESOURCE),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is of type resource and is closed.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert resource $actual
-     */
-    public static function assertIsClosedResource($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new IsType(IsType::TYPE_CLOSED_RESOURCE),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is of type string.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert string $actual
-     */
-    public static function assertIsString($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new IsType(IsType::TYPE_STRING),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is of type scalar.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert scalar $actual
-     */
-    public static function assertIsScalar($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new IsType(IsType::TYPE_SCALAR),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is of type callable.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert callable $actual
-     */
-    public static function assertIsCallable($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new IsType(IsType::TYPE_CALLABLE),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is of type iterable.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert iterable $actual
-     */
-    public static function assertIsIterable($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new IsType(IsType::TYPE_ITERABLE),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type array.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !array $actual
-     */
-    public static function assertIsNotArray($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_ARRAY)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type bool.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !bool $actual
-     */
-    public static function assertIsNotBool($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_BOOL)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type float.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !float $actual
-     */
-    public static function assertIsNotFloat($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_FLOAT)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type int.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !int $actual
-     */
-    public static function assertIsNotInt($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_INT)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type numeric.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !numeric $actual
-     */
-    public static function assertIsNotNumeric($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_NUMERIC)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type object.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !object $actual
-     */
-    public static function assertIsNotObject($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_OBJECT)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type resource.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !resource $actual
-     */
-    public static function assertIsNotResource($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_RESOURCE)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type resource.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !resource $actual
-     */
-    public static function assertIsNotClosedResource($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_CLOSED_RESOURCE)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type string.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !string $actual
-     */
-    public static function assertIsNotString($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_STRING)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type scalar.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !scalar $actual
-     */
-    public static function assertIsNotScalar($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_SCALAR)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type callable.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !callable $actual
-     */
-    public static function assertIsNotCallable($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_CALLABLE)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a variable is not of type iterable.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @psalm-assert !iterable $actual
-     */
-    public static function assertIsNotIterable($actual, string $message = ''): void
-    {
-        static::assertThat(
-            $actual,
-            new LogicalNot(new IsType(IsType::TYPE_ITERABLE)),
-            $message
-        );
-    }
-
-    /**
-     * Asserts that a string matches a given regular expression.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertMatchesRegularExpression(string $pattern, string $string, string $message = ''): void
-    {
-        static::assertThat($string, new RegularExpression($pattern), $message);
-    }
-
-    /**
-     * Asserts that a string matches a given regular expression.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4086
-     */
-    public static function assertRegExp(string $pattern, string $string, string $message = ''): void
-    {
-        self::createWarning('assertRegExp() is deprecated and will be removed in PHPUnit 10. Refactor your code to use assertMatchesRegularExpression() instead.');
-
-        static::assertThat($string, new RegularExpression($pattern), $message);
-    }
-
-    /**
-     * Asserts that a string does not match a given regular expression.
-     *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertDoesNotMatchRegularExpression(string $pattern, string $string, string $message = ''): void
-    {
-        static::assertThat(
-            $string,
             new LogicalNot(
-                new RegularExpression($pattern)
+                new IsType($expected)
             ),
             $message
         );
     }
 
     /**
+     * Asserts that an attribute is of a given type.
+     *
+     * @param string        $expected
+     * @param string        $attributeName
+     * @param object|string $classOrObject
+     * @param string        $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertAttributeNotInternalType(string $expected, string $attributeName, $classOrObject, string $message = ''): void
+    {
+        static::assertNotInternalType(
+            $expected,
+            static::readAttribute($classOrObject, $attributeName),
+            $message
+        );
+    }
+
+    /**
+     * Asserts that a string matches a given regular expression.
+     *
+     * @param string $pattern
+     * @param string $string
+     * @param string $message
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     */
+    public static function assertRegExp(string $pattern, string $string, string $message = ''): void
+    {
+        static::assertThat($string, new RegularExpression($pattern), $message);
+    }
+
+    /**
      * Asserts that a string does not match a given regular expression.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $pattern
+     * @param string $string
+     * @param string $message
+     *
      * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4089
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNotRegExp(string $pattern, string $string, string $message = ''): void
     {
-        self::createWarning('assertNotRegExp() is deprecated and will be removed in PHPUnit 10. Refactor your code to use assertDoesNotMatchRegularExpression() instead.');
-
         static::assertThat(
             $string,
             new LogicalNot(
@@ -1888,19 +1792,19 @@ abstract class Assert
      *
      * @param Countable|iterable $expected
      * @param Countable|iterable $actual
+     * @param string             $message
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertSameSize($expected, $actual, string $message = ''): void
     {
-        if (!$expected instanceof Countable && !is_iterable($expected)) {
-            throw InvalidArgumentException::create(1, 'countable or iterable');
+        if (!$expected instanceof Countable && !\is_iterable($expected)) {
+            throw InvalidArgumentHelper::factory(1, 'countable or iterable');
         }
 
-        if (!$actual instanceof Countable && !is_iterable($actual)) {
-            throw InvalidArgumentException::create(2, 'countable or iterable');
+        if (!$actual instanceof Countable && !\is_iterable($actual)) {
+            throw InvalidArgumentHelper::factory(2, 'countable or iterable');
         }
 
         static::assertThat(
@@ -1916,19 +1820,19 @@ abstract class Assert
      *
      * @param Countable|iterable $expected
      * @param Countable|iterable $actual
+     * @param string             $message
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertNotSameSize($expected, $actual, string $message = ''): void
     {
-        if (!$expected instanceof Countable && !is_iterable($expected)) {
-            throw InvalidArgumentException::create(1, 'countable or iterable');
+        if (!$expected instanceof Countable && !\is_iterable($expected)) {
+            throw InvalidArgumentHelper::factory(1, 'countable or iterable');
         }
 
-        if (!$actual instanceof Countable && !is_iterable($actual)) {
-            throw InvalidArgumentException::create(2, 'countable or iterable');
+        if (!$actual instanceof Countable && !\is_iterable($actual)) {
+            throw InvalidArgumentHelper::factory(2, 'countable or iterable');
         }
 
         static::assertThat(
@@ -1943,8 +1847,12 @@ abstract class Assert
     /**
      * Asserts that a string matches a given format string.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $format
+     * @param string $string
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertStringMatchesFormat(string $format, string $string, string $message = ''): void
     {
@@ -1954,8 +1862,12 @@ abstract class Assert
     /**
      * Asserts that a string does not match a given format string.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $format
+     * @param string $string
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertStringNotMatchesFormat(string $format, string $string, string $message = ''): void
     {
@@ -1971,8 +1883,12 @@ abstract class Assert
     /**
      * Asserts that a string matches a given format file.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $formatFile
+     * @param string $string
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertStringMatchesFormatFile(string $formatFile, string $string, string $message = ''): void
     {
@@ -1981,7 +1897,7 @@ abstract class Assert
         static::assertThat(
             $string,
             new StringMatchesFormatDescription(
-                file_get_contents($formatFile)
+                \file_get_contents($formatFile)
             ),
             $message
         );
@@ -1990,8 +1906,12 @@ abstract class Assert
     /**
      * Asserts that a string does not match a given format string.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $formatFile
+     * @param string $string
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertStringNotMatchesFormatFile(string $formatFile, string $string, string $message = ''): void
     {
@@ -2001,7 +1921,7 @@ abstract class Assert
             $string,
             new LogicalNot(
                 new StringMatchesFormatDescription(
-                    file_get_contents($formatFile)
+                    \file_get_contents($formatFile)
                 )
             ),
             $message
@@ -2011,8 +1931,12 @@ abstract class Assert
     /**
      * Asserts that a string starts with a given prefix.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $prefix
+     * @param string $string
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertStringStartsWith(string $prefix, string $string, string $message = ''): void
     {
@@ -2024,9 +1948,10 @@ abstract class Assert
      *
      * @param string $prefix
      * @param string $string
+     * @param string $message
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertStringStartsNotWith($prefix, $string, string $message = ''): void
     {
@@ -2040,54 +1965,14 @@ abstract class Assert
     }
 
     /**
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertStringContainsString(string $needle, string $haystack, string $message = ''): void
-    {
-        $constraint = new StringContains($needle, false);
-
-        static::assertThat($haystack, $constraint, $message);
-    }
-
-    /**
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertStringContainsStringIgnoringCase(string $needle, string $haystack, string $message = ''): void
-    {
-        $constraint = new StringContains($needle, true);
-
-        static::assertThat($haystack, $constraint, $message);
-    }
-
-    /**
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertStringNotContainsString(string $needle, string $haystack, string $message = ''): void
-    {
-        $constraint = new LogicalNot(new StringContains($needle));
-
-        static::assertThat($haystack, $constraint, $message);
-    }
-
-    /**
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws ExpectationFailedException
-     */
-    public static function assertStringNotContainsStringIgnoringCase(string $needle, string $haystack, string $message = ''): void
-    {
-        $constraint = new LogicalNot(new StringContains($needle, true));
-
-        static::assertThat($haystack, $constraint, $message);
-    }
-
-    /**
      * Asserts that a string ends with a given suffix.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $suffix
+     * @param string $string
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertStringEndsWith(string $suffix, string $string, string $message = ''): void
     {
@@ -2097,8 +1982,12 @@ abstract class Assert
     /**
      * Asserts that a string ends not with a given suffix.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $suffix
+     * @param string $string
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertStringEndsNotWith(string $suffix, string $string, string $message = ''): void
     {
@@ -2114,14 +2003,17 @@ abstract class Assert
     /**
      * Asserts that two XML files are equal.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
-     * @throws Exception
+     * @param string $expectedFile
+     * @param string $actualFile
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertXmlFileEqualsXmlFile(string $expectedFile, string $actualFile, string $message = ''): void
     {
-        $expected = (new XmlLoader)->loadFile($expectedFile);
-        $actual   = (new XmlLoader)->loadFile($actualFile);
+        $expected = Xml::loadFile($expectedFile);
+        $actual   = Xml::loadFile($actualFile);
 
         static::assertEquals($expected, $actual, $message);
     }
@@ -2129,14 +2021,17 @@ abstract class Assert
     /**
      * Asserts that two XML files are not equal.
      *
-     * @throws \PHPUnit\Util\Exception
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $expectedFile
+     * @param string $actualFile
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertXmlFileNotEqualsXmlFile(string $expectedFile, string $actualFile, string $message = ''): void
     {
-        $expected = (new XmlLoader)->loadFile($expectedFile);
-        $actual   = (new XmlLoader)->loadFile($actualFile);
+        $expected = Xml::loadFile($expectedFile);
+        $actual   = Xml::loadFile($actualFile);
 
         static::assertNotEquals($expected, $actual, $message);
     }
@@ -2144,23 +2039,17 @@ abstract class Assert
     /**
      * Asserts that two XML documents are equal.
      *
+     * @param string             $expectedFile
      * @param DOMDocument|string $actualXml
+     * @param string             $message
      *
-     * @throws \PHPUnit\Util\Xml\Exception
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertXmlStringEqualsXmlFile(string $expectedFile, $actualXml, string $message = ''): void
     {
-        if (!is_string($actualXml)) {
-            self::createWarning('Passing an argument of type DOMDocument for the $actualXml parameter is deprecated. Support for this will be removed in PHPUnit 10.');
-
-            $actual = $actualXml;
-        } else {
-            $actual = (new XmlLoader)->load($actualXml);
-        }
-
-        $expected = (new XmlLoader)->loadFile($expectedFile);
+        $expected = Xml::loadFile($expectedFile);
+        $actual   = Xml::load($actualXml);
 
         static::assertEquals($expected, $actual, $message);
     }
@@ -2168,23 +2057,17 @@ abstract class Assert
     /**
      * Asserts that two XML documents are not equal.
      *
+     * @param string             $expectedFile
      * @param DOMDocument|string $actualXml
+     * @param string             $message
      *
-     * @throws \PHPUnit\Util\Xml\Exception
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertXmlStringNotEqualsXmlFile(string $expectedFile, $actualXml, string $message = ''): void
     {
-        if (!is_string($actualXml)) {
-            self::createWarning('Passing an argument of type DOMDocument for the $actualXml parameter is deprecated. Support for this will be removed in PHPUnit 10.');
-
-            $actual = $actualXml;
-        } else {
-            $actual = (new XmlLoader)->load($actualXml);
-        }
-
-        $expected = (new XmlLoader)->loadFile($expectedFile);
+        $expected = Xml::loadFile($expectedFile);
+        $actual   = Xml::load($actualXml);
 
         static::assertNotEquals($expected, $actual, $message);
     }
@@ -2194,28 +2077,15 @@ abstract class Assert
      *
      * @param DOMDocument|string $expectedXml
      * @param DOMDocument|string $actualXml
+     * @param string             $message
      *
-     * @throws \PHPUnit\Util\Xml\Exception
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertXmlStringEqualsXmlString($expectedXml, $actualXml, string $message = ''): void
     {
-        if (!is_string($expectedXml)) {
-            self::createWarning('Passing an argument of type DOMDocument for the $expectedXml parameter is deprecated. Support for this will be removed in PHPUnit 10.');
-
-            $expected = $expectedXml;
-        } else {
-            $expected = (new XmlLoader)->load($expectedXml);
-        }
-
-        if (!is_string($actualXml)) {
-            self::createWarning('Passing an argument of type DOMDocument for the $actualXml parameter is deprecated. Support for this will be removed in PHPUnit 10.');
-
-            $actual = $actualXml;
-        } else {
-            $actual = (new XmlLoader)->load($actualXml);
-        }
+        $expected = Xml::load($expectedXml);
+        $actual   = Xml::load($actualXml);
 
         static::assertEquals($expected, $actual, $message);
     }
@@ -2225,28 +2095,15 @@ abstract class Assert
      *
      * @param DOMDocument|string $expectedXml
      * @param DOMDocument|string $actualXml
+     * @param string             $message
      *
-     * @throws \PHPUnit\Util\Xml\Exception
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertXmlStringNotEqualsXmlString($expectedXml, $actualXml, string $message = ''): void
     {
-        if (!is_string($expectedXml)) {
-            self::createWarning('Passing an argument of type DOMDocument for the $expectedXml parameter is deprecated. Support for this will be removed in PHPUnit 10.');
-
-            $expected = $expectedXml;
-        } else {
-            $expected = (new XmlLoader)->load($expectedXml);
-        }
-
-        if (!is_string($actualXml)) {
-            self::createWarning('Passing an argument of type DOMDocument for the $actualXml parameter is deprecated. Support for this will be removed in PHPUnit 10.');
-
-            $actual = $actualXml;
-        } else {
-            $actual = (new XmlLoader)->load($actualXml);
-        }
+        $expected = Xml::load($expectedXml);
+        $actual   = Xml::load($actualXml);
 
         static::assertNotEquals($expected, $actual, $message);
     }
@@ -2254,32 +2111,36 @@ abstract class Assert
     /**
      * Asserts that a hierarchy of DOMElements matches.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param DOMElement $expectedElement
+     * @param DOMElement $actualElement
+     * @param bool       $checkAttributes
+     * @param string     $message
+     *
      * @throws AssertionFailedError
      * @throws ExpectationFailedException
-     *
-     * @codeCoverageIgnore
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/4091
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertEqualXMLStructure(DOMElement $expectedElement, DOMElement $actualElement, bool $checkAttributes = false, string $message = ''): void
     {
-        self::createWarning('assertEqualXMLStructure() is deprecated and will be removed in PHPUnit 10.');
+        $tmp             = new DOMDocument;
+        $expectedElement = $tmp->importNode($expectedElement, true);
 
-        $expectedElement = Xml::import($expectedElement);
-        $actualElement   = Xml::import($actualElement);
+        $tmp           = new DOMDocument;
+        $actualElement = $tmp->importNode($actualElement, true);
 
-        static::assertSame(
+        unset($tmp);
+
+        static::assertEquals(
             $expectedElement->tagName,
             $actualElement->tagName,
             $message
         );
 
         if ($checkAttributes) {
-            static::assertSame(
+            static::assertEquals(
                 $expectedElement->attributes->length,
                 $actualElement->attributes->length,
-                sprintf(
+                \sprintf(
                     '%s%sNumber of attributes on node "%s" does not match',
                     $message,
                     !empty($message) ? "\n" : '',
@@ -2289,13 +2150,13 @@ abstract class Assert
 
             for ($i = 0; $i < $expectedElement->attributes->length; $i++) {
                 $expectedAttribute = $expectedElement->attributes->item($i);
-                $actualAttribute   = $actualElement->attributes->getNamedItem($expectedAttribute->name);
-
-                assert($expectedAttribute instanceof DOMAttr);
+                $actualAttribute   = $actualElement->attributes->getNamedItem(
+                    $expectedAttribute->name
+                );
 
                 if (!$actualAttribute) {
                     static::fail(
-                        sprintf(
+                        \sprintf(
                             '%s%sCould not find attribute "%s" on node "%s"',
                             $message,
                             !empty($message) ? "\n" : '',
@@ -2310,10 +2171,10 @@ abstract class Assert
         Xml::removeCharacterDataNodes($expectedElement);
         Xml::removeCharacterDataNodes($actualElement);
 
-        static::assertSame(
+        static::assertEquals(
             $expectedElement->childNodes->length,
             $actualElement->childNodes->length,
-            sprintf(
+            \sprintf(
                 '%s%sNumber of child nodes of "%s" differs',
                 $message,
                 !empty($message) ? "\n" : '',
@@ -2334,12 +2195,16 @@ abstract class Assert
     /**
      * Evaluates a PHPUnit\Framework\Constraint matcher object.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param mixed      $value
+     * @param Constraint $constraint
+     * @param string     $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertThat($value, Constraint $constraint, string $message = ''): void
     {
-        self::$count += count($constraint);
+        self::$count += \count($constraint);
 
         $constraint->evaluate($value, $message);
     }
@@ -2347,8 +2212,11 @@ abstract class Assert
     /**
      * Asserts that a string is a valid JSON string.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $actualJson
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertJson(string $actualJson, string $message = ''): void
     {
@@ -2358,8 +2226,12 @@ abstract class Assert
     /**
      * Asserts that two given JSON encoded objects or arrays are equal.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $expectedJson
+     * @param string $actualJson
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertJsonStringEqualsJsonString(string $expectedJson, string $actualJson, string $message = ''): void
     {
@@ -2374,9 +2246,10 @@ abstract class Assert
      *
      * @param string $expectedJson
      * @param string $actualJson
+     * @param string $message
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertJsonStringNotEqualsJsonString($expectedJson, $actualJson, string $message = ''): void
     {
@@ -2395,13 +2268,17 @@ abstract class Assert
     /**
      * Asserts that the generated JSON encoded object and the content of the given file are equal.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $expectedFile
+     * @param string $actualJson
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertJsonStringEqualsJsonFile(string $expectedFile, string $actualJson, string $message = ''): void
     {
         static::assertFileExists($expectedFile, $message);
-        $expectedJson = file_get_contents($expectedFile);
+        $expectedJson = \file_get_contents($expectedFile);
 
         static::assertJson($expectedJson, $message);
         static::assertJson($actualJson, $message);
@@ -2412,13 +2289,17 @@ abstract class Assert
     /**
      * Asserts that the generated JSON encoded object and the content of the given file are not equal.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $expectedFile
+     * @param string $actualJson
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertJsonStringNotEqualsJsonFile(string $expectedFile, string $actualJson, string $message = ''): void
     {
         static::assertFileExists($expectedFile, $message);
-        $expectedJson = file_get_contents($expectedFile);
+        $expectedJson = \file_get_contents($expectedFile);
 
         static::assertJson($expectedJson, $message);
         static::assertJson($actualJson, $message);
@@ -2435,16 +2316,20 @@ abstract class Assert
     /**
      * Asserts that two JSON files are equal.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $expectedFile
+     * @param string $actualFile
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertJsonFileEqualsJsonFile(string $expectedFile, string $actualFile, string $message = ''): void
     {
         static::assertFileExists($expectedFile, $message);
         static::assertFileExists($actualFile, $message);
 
-        $actualJson   = file_get_contents($actualFile);
-        $expectedJson = file_get_contents($expectedFile);
+        $actualJson   = \file_get_contents($actualFile);
+        $expectedJson = \file_get_contents($expectedFile);
 
         static::assertJson($expectedJson, $message);
         static::assertJson($actualJson, $message);
@@ -2462,16 +2347,20 @@ abstract class Assert
     /**
      * Asserts that two JSON files are not equal.
      *
-     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @param string $expectedFile
+     * @param string $actualFile
+     * @param string $message
+     *
      * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      */
     public static function assertJsonFileNotEqualsJsonFile(string $expectedFile, string $actualFile, string $message = ''): void
     {
         static::assertFileExists($expectedFile, $message);
         static::assertFileExists($actualFile, $message);
 
-        $actualJson   = file_get_contents($actualFile);
-        $expectedJson = file_get_contents($expectedFile);
+        $actualJson   = \file_get_contents($actualFile);
+        $expectedJson = \file_get_contents($expectedFile);
 
         static::assertJson($expectedJson, $message);
         static::assertJson($actualJson, $message);
@@ -2486,12 +2375,9 @@ abstract class Assert
         static::assertThat($actualJson, new LogicalNot($constraintExpected), $message);
     }
 
-    /**
-     * @throws Exception
-     */
     public static function logicalAnd(): LogicalAnd
     {
-        $constraints = func_get_args();
+        $constraints = \func_get_args();
 
         $constraint = new LogicalAnd;
         $constraint->setConstraints($constraints);
@@ -2501,7 +2387,7 @@ abstract class Assert
 
     public static function logicalOr(): LogicalOr
     {
-        $constraints = func_get_args();
+        $constraints = \func_get_args();
 
         $constraint = new LogicalOr;
         $constraint->setConstraints($constraints);
@@ -2516,7 +2402,7 @@ abstract class Assert
 
     public static function logicalXor(): LogicalXor
     {
-        $constraints = func_get_args();
+        $constraints = \func_get_args();
 
         $constraint = new LogicalXor;
         $constraint->setConstraints($constraints);
@@ -2534,13 +2420,6 @@ abstract class Assert
         return new IsTrue;
     }
 
-    /**
-     * @psalm-template CallbackInput of mixed
-     *
-     * @psalm-param callable(CallbackInput $callback): bool $callback
-     *
-     * @psalm-return Callback<CallbackInput>
-     */
     public static function callback(callable $callback): Callback
     {
         return new Callback($callback);
@@ -2576,14 +2455,14 @@ abstract class Assert
         return new IsNan;
     }
 
-    public static function containsEqual($value): TraversableContainsEqual
+    public static function attribute(Constraint $constraint, string $attributeName): Attribute
     {
-        return new TraversableContainsEqual($value);
+        return new Attribute($constraint, $attributeName);
     }
 
-    public static function containsIdentical($value): TraversableContainsIdentical
+    public static function contains($value, bool $checkForObjectIdentity = true, bool $checkForNonObjectIdentity = false): TraversableContains
     {
-        return new TraversableContainsIdentical($value);
+        return new TraversableContains($value, $checkForObjectIdentity, $checkForNonObjectIdentity);
     }
 
     public static function containsOnly(string $type): TraversableContainsOnly
@@ -2604,24 +2483,23 @@ abstract class Assert
         return new ArrayHasKey($key);
     }
 
-    public static function equalTo($value): IsEqual
+    public static function equalTo($value, float $delta = 0.0, int $maxDepth = 10, bool $canonicalize = false, bool $ignoreCase = false): IsEqual
     {
-        return new IsEqual($value, 0.0, false, false);
+        return new IsEqual($value, $delta, $maxDepth, $canonicalize, $ignoreCase);
     }
 
-    public static function equalToCanonicalizing($value): IsEqualCanonicalizing
+    public static function attributeEqualTo(string $attributeName, $value, float $delta = 0.0, int $maxDepth = 10, bool $canonicalize = false, bool $ignoreCase = false): Attribute
     {
-        return new IsEqualCanonicalizing($value);
-    }
-
-    public static function equalToIgnoringCase($value): IsEqualIgnoringCase
-    {
-        return new IsEqualIgnoringCase($value);
-    }
-
-    public static function equalToWithDelta($value, float $delta): IsEqualWithDelta
-    {
-        return new IsEqualWithDelta($value, $delta);
+        return static::attribute(
+            static::equalTo(
+                $value,
+                $delta,
+                $maxDepth,
+                $canonicalize,
+                $ignoreCase
+            ),
+            $attributeName
+        );
     }
 
     public static function isEmpty(): IsEmpty
@@ -2735,17 +2613,12 @@ abstract class Assert
         return new Count($count);
     }
 
-    public static function objectEquals(object $object, string $method = 'equals'): ObjectEquals
-    {
-        return new ObjectEquals($object, $method);
-    }
-
     /**
      * Fails a test with the given message.
      *
-     * @throws AssertionFailedError
+     * @param string $message
      *
-     * @psalm-return never-return
+     * @throws AssertionFailedError
      */
     public static function fail(string $message = ''): void
     {
@@ -2755,11 +2628,153 @@ abstract class Assert
     }
 
     /**
+     * Returns the value of an attribute of a class or an object.
+     * This also works for attributes that are declared protected or private.
+     *
+     * @param object|string $classOrObject
+     * @param string        $attributeName
+     *
+     * @throws Exception
+     *
+     * @return mixed
+     */
+    public static function readAttribute($classOrObject, string $attributeName)
+    {
+        if (!self::isValidAttributeName($attributeName)) {
+            throw InvalidArgumentHelper::factory(2, 'valid attribute name');
+        }
+
+        if (\is_string($classOrObject)) {
+            if (!\class_exists($classOrObject)) {
+                throw InvalidArgumentHelper::factory(
+                    1,
+                    'class name'
+                );
+            }
+
+            return static::getStaticAttribute(
+                $classOrObject,
+                $attributeName
+            );
+        }
+
+        if (\is_object($classOrObject)) {
+            return static::getObjectAttribute(
+                $classOrObject,
+                $attributeName
+            );
+        }
+
+        throw InvalidArgumentHelper::factory(
+            1,
+            'class name or object'
+        );
+    }
+
+    /**
+     * Returns the value of a static attribute.
+     * This also works for attributes that are declared protected or private.
+     *
+     * @param string $className
+     * @param string $attributeName
+     *
+     * @throws Exception
+     * @throws ReflectionException
+     *
+     * @return mixed
+     */
+    public static function getStaticAttribute(string $className, string $attributeName)
+    {
+        if (!\class_exists($className)) {
+            throw InvalidArgumentHelper::factory(1, 'class name');
+        }
+
+        if (!self::isValidAttributeName($attributeName)) {
+            throw InvalidArgumentHelper::factory(2, 'valid attribute name');
+        }
+
+        $class = new ReflectionClass($className);
+
+        while ($class) {
+            $attributes = $class->getStaticProperties();
+
+            if (\array_key_exists($attributeName, $attributes)) {
+                return $attributes[$attributeName];
+            }
+
+            $class = $class->getParentClass();
+        }
+
+        throw new Exception(
+            \sprintf(
+                'Attribute "%s" not found in class.',
+                $attributeName
+            )
+        );
+    }
+
+    /**
+     * Returns the value of an object's attribute.
+     * This also works for attributes that are declared protected or private.
+     *
+     * @param object $object
+     * @param string $attributeName
+     *
+     * @throws Exception
+     *
+     * @return mixed
+     */
+    public static function getObjectAttribute($object, string $attributeName)
+    {
+        if (!\is_object($object)) {
+            throw InvalidArgumentHelper::factory(1, 'object');
+        }
+
+        if (!self::isValidAttributeName($attributeName)) {
+            throw InvalidArgumentHelper::factory(2, 'valid attribute name');
+        }
+
+        try {
+            $attribute = new ReflectionProperty($object, $attributeName);
+        } catch (ReflectionException $e) {
+            $reflector = new ReflectionObject($object);
+
+            while ($reflector = $reflector->getParentClass()) {
+                try {
+                    $attribute = $reflector->getProperty($attributeName);
+
+                    break;
+                } catch (ReflectionException $e) {
+                }
+            }
+        }
+
+        if (isset($attribute)) {
+            if (!$attribute || $attribute->isPublic()) {
+                return $object->$attributeName;
+            }
+
+            $attribute->setAccessible(true);
+            $value = $attribute->getValue($object);
+            $attribute->setAccessible(false);
+
+            return $value;
+        }
+
+        throw new Exception(
+            \sprintf(
+                'Attribute "%s" not found in object.',
+                $attributeName
+            )
+        );
+    }
+
+    /**
      * Mark the test as incomplete.
      *
-     * @throws IncompleteTestError
+     * @param string $message
      *
-     * @psalm-return never-return
+     * @throws IncompleteTestError
      */
     public static function markTestIncomplete(string $message = ''): void
     {
@@ -2769,20 +2784,12 @@ abstract class Assert
     /**
      * Mark the test as skipped.
      *
-     * @throws SkippedTestError
-     * @throws SyntheticSkippedError
+     * @param string $message
      *
-     * @psalm-return never-return
+     * @throws SkippedTestError
      */
     public static function markTestSkipped(string $message = ''): void
     {
-        if ($hint = self::detectLocationHint($message)) {
-            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            array_unshift($trace, $hint);
-
-            throw new SyntheticSkippedError($hint['message'], 0, $hint['file'], (int) $hint['line'], $trace);
-        }
-
         throw new SkippedTestError($message);
     }
 
@@ -2802,53 +2809,8 @@ abstract class Assert
         self::$count = 0;
     }
 
-    private static function detectLocationHint(string $message): ?array
+    private static function isValidAttributeName(string $attributeName): bool
     {
-        $hint  = null;
-        $lines = preg_split('/\r\n|\r|\n/', $message);
-
-        while (strpos($lines[0], '__OFFSET') !== false) {
-            $offset = explode('=', array_shift($lines));
-
-            if ($offset[0] === '__OFFSET_FILE') {
-                $hint['file'] = $offset[1];
-            }
-
-            if ($offset[0] === '__OFFSET_LINE') {
-                $hint['line'] = $offset[1];
-            }
-        }
-
-        if ($hint) {
-            $hint['message'] = implode(PHP_EOL, $lines);
-        }
-
-        return $hint;
-    }
-
-    private static function isValidObjectAttributeName(string $attributeName): bool
-    {
-        return (bool) preg_match('/[^\x00-\x1f\x7f-\x9f]+/', $attributeName);
-    }
-
-    private static function isValidClassAttributeName(string $attributeName): bool
-    {
-        return (bool) preg_match('/[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*/', $attributeName);
-    }
-
-    /**
-     * @codeCoverageIgnore
-     */
-    private static function createWarning(string $warning): void
-    {
-        foreach (debug_backtrace() as $step) {
-            if (isset($step['object']) && $step['object'] instanceof TestCase) {
-                assert($step['object'] instanceof TestCase);
-
-                $step['object']->addWarning($warning);
-
-                break;
-            }
-        }
+        return \preg_match('/[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*/', $attributeName);
     }
 }

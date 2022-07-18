@@ -14,9 +14,6 @@ class GoutteServiceProviderTest extends TestCase
     {
         $this->assertTrue($this->app->bound('goutte'));
         $this->assertTrue($this->app->bound('goutte.client'));
-
-        $this->assertInstanceOf(GoutteClient::class, $this->app->make('goutte'));
-        $this->assertInstanceOf(GuzzleClient::class, $this->app->make('goutte.client'));
     }
 
     /**
@@ -26,6 +23,9 @@ class GoutteServiceProviderTest extends TestCase
     {
         $this->assertTrue($this->app->isAlias(GoutteClient::class));
         $this->assertEquals('goutte', $this->app->getAlias(GoutteClient::class));
+
+        $this->assertTrue($this->app->isAlias(GuzzleClient::class));
+        $this->assertEquals('goutte.client', $this->app->getAlias(GuzzleClient::class));
     }
 
     /**
@@ -39,25 +39,5 @@ class GoutteServiceProviderTest extends TestCase
             'allow_redirects' => false,
             'cookies' => true,
         ]);
-    }
-
-    /**
-     * @test
-     */
-    public function does_provide_singleton_instance ()
-    {
-        $this->assertSame($this->app->make('goutte'), $this->app->make('goutte'));
-        $this->assertSame($this->app->make('goutte.client'), $this->app->make('goutte.client'));
-    }
-
-    /**
-     * @test
-     */
-    public function does_not_remap_guzzle_client_to_custom_singleton() 
-    {
-        $a = $this->app->make(GuzzleClient::class);
-        $b = $this->app->make(GuzzleClient::class);
-
-        $this->assertNotSame($a, $b);
     }
 }

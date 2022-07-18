@@ -2,14 +2,11 @@
 
 namespace Illuminate\Foundation\Console;
 
-use Illuminate\Console\Concerns\CreatesMatchingTest;
 use Illuminate\Console\GeneratorCommand;
 use Symfony\Component\Console\Input\InputOption;
 
 class NotificationMakeCommand extends GeneratorCommand
 {
-    use CreatesMatchingTest;
-
     /**
      * The console command name.
      *
@@ -54,9 +51,7 @@ class NotificationMakeCommand extends GeneratorCommand
      */
     protected function writeMarkdownTemplate()
     {
-        $path = $this->viewPath(
-            str_replace('.', '/', $this->option('markdown')).'.blade.php'
-        );
+        $path = resource_path('views/'.str_replace('.', '/', $this->option('markdown'))).'.blade.php';
 
         if (! $this->files->isDirectory(dirname($path))) {
             $this->files->makeDirectory(dirname($path), 0755, true);
@@ -76,7 +71,7 @@ class NotificationMakeCommand extends GeneratorCommand
         $class = parent::buildClass($name);
 
         if ($this->option('markdown')) {
-            $class = str_replace(['DummyView', '{{ view }}'], $this->option('markdown'), $class);
+            $class = str_replace('DummyView', $this->option('markdown'), $class);
         }
 
         return $class;
@@ -90,21 +85,8 @@ class NotificationMakeCommand extends GeneratorCommand
     protected function getStub()
     {
         return $this->option('markdown')
-            ? $this->resolveStubPath('/stubs/markdown-notification.stub')
-            : $this->resolveStubPath('/stubs/notification.stub');
-    }
-
-    /**
-     * Resolve the fully-qualified path to the stub.
-     *
-     * @param  string  $stub
-     * @return string
-     */
-    protected function resolveStubPath($stub)
-    {
-        return file_exists($customPath = $this->laravel->basePath(trim($stub, '/')))
-            ? $customPath
-            : __DIR__.$stub;
+                        ? __DIR__.'/stubs/markdown-notification.stub'
+                        : __DIR__.'/stubs/notification.stub';
     }
 
     /**
@@ -126,9 +108,9 @@ class NotificationMakeCommand extends GeneratorCommand
     protected function getOptions()
     {
         return [
-            ['force', 'f', InputOption::VALUE_NONE, 'Create the class even if the notification already exists'],
+            ['force', 'f', InputOption::VALUE_NONE, 'Create the class even if the notification already exists.'],
 
-            ['markdown', 'm', InputOption::VALUE_OPTIONAL, 'Create a new Markdown template for the notification'],
+            ['markdown', 'm', InputOption::VALUE_OPTIONAL, 'Create a new Markdown template for the notification.'],
         ];
     }
 }

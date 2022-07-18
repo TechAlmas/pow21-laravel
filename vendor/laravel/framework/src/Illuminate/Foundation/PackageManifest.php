@@ -65,7 +65,9 @@ class PackageManifest
      */
     public function providers()
     {
-        return $this->config('providers');
+        return collect($this->getManifest())->flatMap(function ($configuration) {
+            return (array) ($configuration['providers'] ?? []);
+        })->filter()->all();
     }
 
     /**
@@ -75,19 +77,8 @@ class PackageManifest
      */
     public function aliases()
     {
-        return $this->config('aliases');
-    }
-
-    /**
-     * Get all of the values for all packages for the given configuration name.
-     *
-     * @param  string  $key
-     * @return array
-     */
-    public function config($key)
-    {
-        return collect($this->getManifest())->flatMap(function ($configuration) use ($key) {
-            return (array) ($configuration[$key] ?? []);
+        return collect($this->getManifest())->flatMap(function ($configuration) {
+            return (array) ($configuration['aliases'] ?? []);
         })->filter()->all();
     }
 
@@ -102,11 +93,11 @@ class PackageManifest
             return $this->manifest;
         }
 
-        if (! is_file($this->manifestPath)) {
+        if (! file_exists($this->manifestPath)) {
             $this->build();
         }
 
-        return $this->manifest = is_file($this->manifestPath) ?
+        return $this->manifest = file_exists($this->manifestPath) ?
             $this->files->getRequire($this->manifestPath) : [];
     }
 
@@ -120,8 +111,8 @@ class PackageManifest
         $packages = [];
 
         if ($this->files->exists($path = $this->vendorPath.'/composer/installed.json')) {
+            // $packages = json_decode($this->files->get($path), true); 
             $installed = json_decode($this->files->get($path), true);
-
             $packages = $installed['packages'] ?? $installed;
         }
 
@@ -154,7 +145,7 @@ class PackageManifest
      */
     protected function packagesToIgnore()
     {
-        if (! is_file($this->basePath.'/composer.json')) {
+        if (! file_exists($this->basePath.'/composer.json')) {
             return [];
         }
 
@@ -168,16 +159,15 @@ class PackageManifest
      *
      * @param  array  $manifest
      * @return void
-     *
      * @throws \Exception
      */
     protected function write(array $manifest)
     {
-        if (! is_writable($dirname = dirname($this->manifestPath))) {
-            throw new Exception("The {$dirname} directory must be present and writable.");
+        if (! is_writable(dirname($this->manifestPath))) {
+            throw new Exception('The '.dirname($this->manifestPath).' directory must be present and writable.');
         }
 
-        $this->files->replace(
+        $this->files->put(
             $this->manifestPath, '<?php return '.var_export($manifest, true).';'
         );
     }

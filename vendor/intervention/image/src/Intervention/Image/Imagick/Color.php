@@ -2,9 +2,7 @@
 
 namespace Intervention\Image\Imagick;
 
-use Intervention\Image\AbstractColor;
-
-class Color extends AbstractColor
+class Color extends \Intervention\Image\AbstractColor
 {
     /**
      * ImagickPixel containing current color information
@@ -180,7 +178,7 @@ class Color extends AbstractColor
      * @param  int           $tolerance
      * @return boolean
      */
-    public function differs(AbstractColor $color, $tolerance = 0)
+    public function differs(\Intervention\Image\AbstractColor $color, $tolerance = 0)
     {
         $color_tolerance = round($tolerance * 2.55);
         $alpha_tolerance = round($tolerance);
@@ -265,7 +263,7 @@ class Color extends AbstractColor
     }
 
     /**
-     * Calculates RGBA integer alpha value into float value
+     * Calculates RGA integer alpha value into float value
      *
      * @param  int $value
      * @return float

@@ -38,7 +38,7 @@ class SplFileInfo extends \SplFileInfo
      *
      * This path does not contain the file name.
      *
-     * @return string
+     * @return string the relative path
      */
     public function getRelativePath()
     {
@@ -50,35 +50,25 @@ class SplFileInfo extends \SplFileInfo
      *
      * This path contains the file name.
      *
-     * @return string
+     * @return string the relative path name
      */
     public function getRelativePathname()
     {
         return $this->relativePathname;
     }
 
-    public function getFilenameWithoutExtension(): string
-    {
-        $filename = $this->getFilename();
-
-        return pathinfo($filename, \PATHINFO_FILENAME);
-    }
-
     /**
      * Returns the contents of the file.
      *
-     * @return string
+     * @return string the contents of the file
      *
      * @throws \RuntimeException
      */
     public function getContents()
     {
         set_error_handler(function ($type, $msg) use (&$error) { $error = $msg; });
-        try {
-            $content = file_get_contents($this->getPathname());
-        } finally {
-            restore_error_handler();
-        }
+        $content = file_get_contents($this->getPathname());
+        restore_error_handler();
         if (false === $content) {
             throw new \RuntimeException($error);
         }

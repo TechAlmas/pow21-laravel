@@ -21,19 +21,12 @@ namespace Symfony\Component\HttpKernel\CacheWarmer;
 class CacheWarmerAggregate implements CacheWarmerInterface
 {
     private $warmers;
-    private $debug;
-    private $deprecationLogsFilepath;
     private $optionalsEnabled = false;
     private $onlyOptionalsEnabled = false;
 
-    /**
-     * @param iterable<mixed, CacheWarmerInterface> $warmers
-     */
-    public function __construct(iterable $warmers = [], bool $debug = false, string $deprecationLogsFilepath = null)
+    public function __construct(iterable $warmers = array())
     {
         $this->warmers = $warmers;
-        $this->debug = $debug;
-        $this->deprecationLogsFilepath = $deprecationLogsFilepath;
     }
 
     public function enableOptionalWarmers()
@@ -47,79 +40,30 @@ class CacheWarmerAggregate implements CacheWarmerInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Warms up the cache.
+     *
+     * @param string $cacheDir The cache directory
      */
-    public function warmUp(string $cacheDir): array
+    public function warmUp($cacheDir)
     {
-        if ($collectDeprecations = $this->debug && !\defined('PHPUNIT_COMPOSER_INSTALL')) {
-            $collectedLogs = [];
-            $previousHandler = set_error_handler(function ($type, $message, $file, $line) use (&$collectedLogs, &$previousHandler) {
-                if (\E_USER_DEPRECATED !== $type && \E_DEPRECATED !== $type) {
-                    return $previousHandler ? $previousHandler($type, $message, $file, $line) : false;
-                }
-
-                if (isset($collectedLogs[$message])) {
-                    ++$collectedLogs[$message]['count'];
-
-                    return null;
-                }
-
-                $backtrace = debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS, 3);
-                // Clean the trace by removing first frames added by the error handler itself.
-                for ($i = 0; isset($backtrace[$i]); ++$i) {
-                    if (isset($backtrace[$i]['file'], $backtrace[$i]['line']) && $backtrace[$i]['line'] === $line && $backtrace[$i]['file'] === $file) {
-                        $backtrace = \array_slice($backtrace, 1 + $i);
-                        break;
-                    }
-                }
-
-                $collectedLogs[$message] = [
-                    'type' => $type,
-                    'message' => $message,
-                    'file' => $file,
-                    'line' => $line,
-                    'trace' => $backtrace,
-                    'count' => 1,
-                ];
-
-                return null;
-            });
-        }
-
-        $preload = [];
-        try {
-            foreach ($this->warmers as $warmer) {
-                if (!$this->optionalsEnabled && $warmer->isOptional()) {
-                    continue;
-                }
-                if ($this->onlyOptionalsEnabled && !$warmer->isOptional()) {
-                    continue;
-                }
-
-                $preload[] = array_values((array) $warmer->warmUp($cacheDir));
+        foreach ($this->warmers as $warmer) {
+            if (!$this->optionalsEnabled && $warmer->isOptional()) {
+                continue;
             }
-        } finally {
-            if ($collectDeprecations) {
-                restore_error_handler();
-
-                if (is_file($this->deprecationLogsFilepath)) {
-                    $previousLogs = unserialize(file_get_contents($this->deprecationLogsFilepath));
-                    if (\is_array($previousLogs)) {
-                        $collectedLogs = array_merge($previousLogs, $collectedLogs);
-                    }
-                }
-
-                file_put_contents($this->deprecationLogsFilepath, serialize(array_values($collectedLogs)));
+            if ($this->onlyOptionalsEnabled && !$warmer->isOptional()) {
+                continue;
             }
-        }
 
-        return array_values(array_unique(array_merge([], ...$preload)));
+            $warmer->warmUp($cacheDir);
+        }
     }
 
     /**
-     * {@inheritdoc}
+     * Checks whether this warmer is optional or not.
+     *
+     * @return bool always false
      */
-    public function isOptional(): bool
+    public function isOptional()
     {
         return false;
     }

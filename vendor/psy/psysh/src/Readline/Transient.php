@@ -3,7 +3,7 @@
 /*
  * This file is part of Psy Shell.
  *
- * (c) 2012-2022 Justin Hileman
+ * (c) 2012-2018 Justin Hileman
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -28,17 +28,9 @@ class Transient implements Readline
      *
      * {@inheritdoc}
      */
-    public static function isSupported(): bool
+    public static function isSupported()
     {
         return true;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public static function supportsBracketedPaste(): bool
-    {
-        return false;
     }
 
     /**
@@ -47,18 +39,18 @@ class Transient implements Readline
     public function __construct($historyFile = null, $historySize = 0, $eraseDups = false)
     {
         // don't do anything with the history file...
-        $this->history = [];
+        $this->history     = [];
         $this->historySize = $historySize;
-        $this->eraseDups = $eraseDups;
+        $this->eraseDups   = $eraseDups;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function addHistory(string $line): bool
+    public function addHistory($line)
     {
         if ($this->eraseDups) {
-            if (($key = \array_search($line, $this->history)) !== false) {
+            if (($key = array_search($line, $this->history)) !== false) {
                 unset($this->history[$key]);
             }
         }
@@ -66,13 +58,13 @@ class Transient implements Readline
         $this->history[] = $line;
 
         if ($this->historySize > 0) {
-            $histsize = \count($this->history);
+            $histsize = count($this->history);
             if ($histsize > $this->historySize) {
-                $this->history = \array_slice($this->history, $histsize - $this->historySize);
+                $this->history = array_slice($this->history, $histsize - $this->historySize);
             }
         }
 
-        $this->history = \array_values($this->history);
+        $this->history = array_values($this->history);
 
         return true;
     }
@@ -80,7 +72,7 @@ class Transient implements Readline
     /**
      * {@inheritdoc}
      */
-    public function clearHistory(): bool
+    public function clearHistory()
     {
         $this->history = [];
 
@@ -90,7 +82,7 @@ class Transient implements Readline
     /**
      * {@inheritdoc}
      */
-    public function listHistory(): array
+    public function listHistory()
     {
         return $this->history;
     }
@@ -98,7 +90,7 @@ class Transient implements Readline
     /**
      * {@inheritdoc}
      */
-    public function readHistory(): bool
+    public function readHistory()
     {
         return true;
     }
@@ -108,13 +100,13 @@ class Transient implements Readline
      *
      * @throws BreakException if user hits Ctrl+D
      *
-     * @return false|string
+     * @return string
      */
-    public function readline(string $prompt = null)
+    public function readline($prompt = null)
     {
         echo $prompt;
 
-        return \rtrim(\fgets($this->getStdin()), "\n\r");
+        return rtrim(fgets($this->getStdin(), 1024));
     }
 
     /**
@@ -128,7 +120,7 @@ class Transient implements Readline
     /**
      * {@inheritdoc}
      */
-    public function writeHistory(): bool
+    public function writeHistory()
     {
         return true;
     }
@@ -143,10 +135,10 @@ class Transient implements Readline
     private function getStdin()
     {
         if (!isset($this->stdin)) {
-            $this->stdin = \fopen('php://stdin', 'r');
+            $this->stdin = fopen('php://stdin', 'r');
         }
 
-        if (\feof($this->stdin)) {
+        if (feof($this->stdin)) {
             throw new BreakException('Ctrl+D');
         }
 

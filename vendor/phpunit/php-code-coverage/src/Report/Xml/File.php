@@ -1,39 +1,34 @@
-<?php declare(strict_types=1);
+<?php
 /*
- * This file is part of phpunit/php-code-coverage.
+ * This file is part of the php-code-coverage package.
  *
  * (c) Sebastian Bergmann <sebastian@phpunit.de>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace SebastianBergmann\CodeCoverage\Report\Xml;
 
-use DOMDocument;
-use DOMElement;
-
-/**
- * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
- */
 class File
 {
     /**
-     * @var DOMDocument
+     * @var \DOMDocument
      */
     private $dom;
 
     /**
-     * @var DOMElement
+     * @var \DOMElement
      */
     private $contextNode;
 
-    public function __construct(DOMElement $context)
+    public function __construct(\DOMElement $context)
     {
         $this->dom         = $context->ownerDocument;
         $this->contextNode = $context;
     }
 
-    public function totals(): Totals
+    public function getTotals(): Totals
     {
         $totalsContainer = $this->contextNode->firstChild;
 
@@ -49,7 +44,7 @@ class File
         return new Totals($totalsContainer);
     }
 
-    public function lineCoverage(string $line): Coverage
+    public function getLineCoverage(string $line): Coverage
     {
         $coverage = $this->contextNode->getElementsByTagNameNS(
             'https://schema.phpunit.de/coverage/1.0',
@@ -75,12 +70,12 @@ class File
         return new Coverage($lineNode, $line);
     }
 
-    protected function contextNode(): DOMElement
+    protected function getContextNode(): \DOMElement
     {
         return $this->contextNode;
     }
 
-    protected function dom(): DOMDocument
+    protected function getDomDocument(): \DOMDocument
     {
         return $this->dom;
     }

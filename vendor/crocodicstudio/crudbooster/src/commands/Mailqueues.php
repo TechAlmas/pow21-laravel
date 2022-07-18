@@ -1,7 +1,7 @@
 <?php namespace crocodicstudio\crudbooster\commands;
 
 use Cache;
-use crocodicstudio\crudbooster\helpers\CRUDBooster;
+use CRUDBooster;
 use DB;
 use Illuminate\Console\Command;
 use Request;
@@ -35,7 +35,7 @@ class Mailqueues extends Command
 
         $this->comment('Mail Queues Started '.$now);
 
-        $queues = db('cms_email_queues')->where('send_at', '<=', $now)->take(25)->get();
+        $queues = DB::table('cms_email_queues')->where('send_at', '<=', $now)->take($limit_an_hour)->get();
 
         $this->comment('Total Queues : '.count($queues));
 
@@ -44,7 +44,7 @@ class Mailqueues extends Command
 
         foreach ($queues as $q) {
             if (filter_var($q->email_recipient, FILTER_VALIDATE_EMAIL) !== false) {
-                CRUDBooster::sendEmailQueue($q);
+                CRUDBooster::sendEmailQueue($queue);
                 $this->comment('Email send -> '.$q->subject);
             }
             DB::table('mailqueues')->where('id', $q->id)->delete();

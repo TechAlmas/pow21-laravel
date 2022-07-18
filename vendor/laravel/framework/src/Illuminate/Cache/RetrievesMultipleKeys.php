@@ -16,34 +16,24 @@ trait RetrievesMultipleKeys
     {
         $return = [];
 
-        $keys = collect($keys)->mapWithKeys(function ($value, $key) {
-            return [is_string($key) ? $key : $value => is_string($key) ? $value : null];
-        })->all();
-
-        foreach ($keys as $key => $default) {
-            $return[$key] = $this->get($key, $default);
+        foreach ($keys as $key) {
+            $return[$key] = $this->get($key);
         }
 
         return $return;
     }
 
     /**
-     * Store multiple items in the cache for a given number of seconds.
+     * Store multiple items in the cache for a given number of minutes.
      *
      * @param  array  $values
-     * @param  int  $seconds
-     * @return bool
+     * @param  float|int  $minutes
+     * @return void
      */
-    public function putMany(array $values, $seconds)
+    public function putMany(array $values, $minutes)
     {
-        $manyResult = null;
-
         foreach ($values as $key => $value) {
-            $result = $this->put($key, $value, $seconds);
-
-            $manyResult = is_null($manyResult) ? $result : $result && $manyResult;
+            $this->put($key, $value, $minutes);
         }
-
-        return $manyResult ?: false;
     }
 }

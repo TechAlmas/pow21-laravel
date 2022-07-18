@@ -29,12 +29,12 @@ interface ExpectationInterface
     public function getOrderNumber();
 
     /**
-     * @return LegacyMockInterface|MockInterface
+     * @return MockInterface
      */
     public function getMock();
 
     /**
-     * @param mixed $args
+     * @param array ...$args
      * @return self
      */
     public function andReturn(...$args);

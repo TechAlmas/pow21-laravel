@@ -21,20 +21,24 @@ use Symfony\Component\Translation\MessageCatalogue;
  */
 class PhpExtractor extends AbstractFileExtractor implements ExtractorInterface
 {
-    public const MESSAGE_TOKEN = 300;
-    public const METHOD_ARGUMENTS_TOKEN = 1000;
-    public const DOMAIN_TOKEN = 1001;
+    const MESSAGE_TOKEN = 300;
+    const METHOD_ARGUMENTS_TOKEN = 1000;
+    const DOMAIN_TOKEN = 1001;
 
     /**
      * Prefix for new found message.
+     *
+     * @var string
      */
-    private string $prefix = '';
+    private $prefix = '';
 
     /**
      * The sequence that captures translation messages.
+     *
+     * @var array
      */
-    protected $sequences = [
-        [
+    protected $sequences = array(
+        array(
             '->',
             'trans',
             '(',
@@ -43,100 +47,43 @@ class PhpExtractor extends AbstractFileExtractor implements ExtractorInterface
             self::METHOD_ARGUMENTS_TOKEN,
             ',',
             self::DOMAIN_TOKEN,
-        ],
-        [
+        ),
+        array(
+            '->',
+            'transChoice',
+            '(',
+            self::MESSAGE_TOKEN,
+            ',',
+            self::METHOD_ARGUMENTS_TOKEN,
+            ',',
+            self::METHOD_ARGUMENTS_TOKEN,
+            ',',
+            self::DOMAIN_TOKEN,
+        ),
+        array(
             '->',
             'trans',
             '(',
             self::MESSAGE_TOKEN,
-        ],
-        [
-            'new',
-            'TranslatableMessage',
+        ),
+        array(
+            '->',
+            'transChoice',
             '(',
             self::MESSAGE_TOKEN,
-            ',',
-            self::METHOD_ARGUMENTS_TOKEN,
-            ',',
-            self::DOMAIN_TOKEN,
-        ],
-        [
-            'new',
-            'TranslatableMessage',
-            '(',
-            self::MESSAGE_TOKEN,
-        ],
-        [
-            'new',
-            '\\',
-            'Symfony',
-            '\\',
-            'Component',
-            '\\',
-            'Translation',
-            '\\',
-            'TranslatableMessage',
-            '(',
-            self::MESSAGE_TOKEN,
-            ',',
-            self::METHOD_ARGUMENTS_TOKEN,
-            ',',
-            self::DOMAIN_TOKEN,
-        ],
-        [
-            'new',
-            '\Symfony\Component\Translation\TranslatableMessage',
-            '(',
-            self::MESSAGE_TOKEN,
-            ',',
-            self::METHOD_ARGUMENTS_TOKEN,
-            ',',
-            self::DOMAIN_TOKEN,
-        ],
-        [
-            'new',
-            '\\',
-            'Symfony',
-            '\\',
-            'Component',
-            '\\',
-            'Translation',
-            '\\',
-            'TranslatableMessage',
-            '(',
-            self::MESSAGE_TOKEN,
-        ],
-        [
-            'new',
-            '\Symfony\Component\Translation\TranslatableMessage',
-            '(',
-            self::MESSAGE_TOKEN,
-        ],
-        [
-            't',
-            '(',
-            self::MESSAGE_TOKEN,
-            ',',
-            self::METHOD_ARGUMENTS_TOKEN,
-            ',',
-            self::DOMAIN_TOKEN,
-        ],
-        [
-            't',
-            '(',
-            self::MESSAGE_TOKEN,
-        ],
-    ];
+        ),
+    );
 
     /**
      * {@inheritdoc}
      */
-    public function extract(string|iterable $resource, MessageCatalogue $catalog)
+    public function extract($resource, MessageCatalogue $catalog)
     {
         $files = $this->extractFiles($resource);
         foreach ($files as $file) {
-            $this->parseTokens(token_get_all(file_get_contents($file)), $catalog, $file);
+            $this->parseTokens(token_get_all(file_get_contents($file)), $catalog);
 
+            // PHP 7 memory manager will not release after token_get_all(), see https://bugs.php.net/70098
             gc_mem_caches();
         }
     }
@@ -144,15 +91,19 @@ class PhpExtractor extends AbstractFileExtractor implements ExtractorInterface
     /**
      * {@inheritdoc}
      */
-    public function setPrefix(string $prefix)
+    public function setPrefix($prefix)
     {
         $this->prefix = $prefix;
     }
 
     /**
      * Normalizes a token.
+     *
+     * @param mixed $token
+     *
+     * @return string
      */
-    protected function normalizeToken(mixed $token): ?string
+    protected function normalizeToken($token)
     {
         if (isset($token[1]) && 'b"' !== $token) {
             return $token[1];
@@ -168,7 +119,7 @@ class PhpExtractor extends AbstractFileExtractor implements ExtractorInterface
     {
         for (; $tokenIterator->valid(); $tokenIterator->next()) {
             $t = $tokenIterator->current();
-            if (\T_WHITESPACE !== $t[0]) {
+            if (T_WHITESPACE !== $t[0]) {
                 break;
             }
         }
@@ -203,53 +154,30 @@ class PhpExtractor extends AbstractFileExtractor implements ExtractorInterface
     {
         $message = '';
         $docToken = '';
-        $docPart = '';
 
         for (; $tokenIterator->valid(); $tokenIterator->next()) {
             $t = $tokenIterator->current();
-            if ('.' === $t) {
-                // Concatenate with next token
-                continue;
-            }
             if (!isset($t[1])) {
                 break;
             }
 
             switch ($t[0]) {
-                case \T_START_HEREDOC:
+                case T_START_HEREDOC:
                     $docToken = $t[1];
                     break;
-                case \T_ENCAPSED_AND_WHITESPACE:
-                case \T_CONSTANT_ENCAPSED_STRING:
-                    if ('' === $docToken) {
-                        $message .= PhpStringTokenParser::parse($t[1]);
-                    } else {
-                        $docPart = $t[1];
-                    }
+                case T_ENCAPSED_AND_WHITESPACE:
+                case T_CONSTANT_ENCAPSED_STRING:
+                    $message .= $t[1];
                     break;
-                case \T_END_HEREDOC:
-                    if ($indentation = strspn($t[1], ' ')) {
-                        $docPartWithLineBreaks = $docPart;
-                        $docPart = '';
-
-                        foreach (preg_split('~(\r\n|\n|\r)~', $docPartWithLineBreaks, -1, \PREG_SPLIT_DELIM_CAPTURE) as $str) {
-                            if (\in_array($str, ["\r\n", "\n", "\r"], true)) {
-                                $docPart .= $str;
-                            } else {
-                                $docPart .= substr($str, $indentation);
-                            }
-                        }
-                    }
-
-                    $message .= PhpStringTokenParser::parseDocString($docToken, $docPart);
-                    $docToken = '';
-                    $docPart = '';
-                    break;
-                case \T_WHITESPACE:
-                    break;
+                case T_END_HEREDOC:
+                    return PhpStringTokenParser::parseDocString($docToken, $message);
                 default:
                     break 2;
             }
+        }
+
+        if ($message) {
+            $message = PhpStringTokenParser::parse($message);
         }
 
         return $message;
@@ -257,8 +185,11 @@ class PhpExtractor extends AbstractFileExtractor implements ExtractorInterface
 
     /**
      * Extracts trans message from PHP tokens.
+     *
+     * @param array            $tokens
+     * @param MessageCatalogue $catalog
      */
-    protected function parseTokens(array $tokens, MessageCatalogue $catalog, string $filename)
+    protected function parseTokens($tokens, MessageCatalogue $catalog)
     {
         $tokenIterator = new \ArrayIterator($tokens);
 
@@ -277,16 +208,13 @@ class PhpExtractor extends AbstractFileExtractor implements ExtractorInterface
                     } elseif (self::MESSAGE_TOKEN === $item) {
                         $message = $this->getValue($tokenIterator);
 
-                        if (\count($sequence) === ($sequenceKey + 1)) {
+                        if (count($sequence) === ($sequenceKey + 1)) {
                             break;
                         }
                     } elseif (self::METHOD_ARGUMENTS_TOKEN === $item) {
                         $this->skipMethodArgument($tokenIterator);
                     } elseif (self::DOMAIN_TOKEN === $item) {
-                        $domainToken = $this->getValue($tokenIterator);
-                        if ('' !== $domainToken) {
-                            $domain = $domainToken;
-                        }
+                        $domain = $this->getValue($tokenIterator);
 
                         break;
                     } else {
@@ -296,10 +224,6 @@ class PhpExtractor extends AbstractFileExtractor implements ExtractorInterface
 
                 if ($message) {
                     $catalog->set($message, $this->prefix.$message, $domain);
-                    $metadata = $catalog->getMetadata($message, $domain) ?? [];
-                    $normalizedFilename = preg_replace('{[\\\\/]+}', '/', $filename);
-                    $metadata['sources'][] = $normalizedFilename.':'.$tokens[$key][2];
-                    $catalog->setMetadata($message, $metadata, $domain);
                     break;
                 }
             }
@@ -307,22 +231,24 @@ class PhpExtractor extends AbstractFileExtractor implements ExtractorInterface
     }
 
     /**
+     * @param string $file
+     *
+     * @return bool
+     *
      * @throws \InvalidArgumentException
      */
-    protected function canBeExtracted(string $file): bool
+    protected function canBeExtracted($file)
     {
-        return $this->isFile($file) && 'php' === pathinfo($file, \PATHINFO_EXTENSION);
+        return $this->isFile($file) && 'php' === pathinfo($file, PATHINFO_EXTENSION);
     }
 
     /**
-     * {@inheritdoc}
+     * @param string|array $directory
+     *
+     * @return array
      */
-    protected function extractFromDirectory(string|array $directory): iterable
+    protected function extractFromDirectory($directory)
     {
-        if (!class_exists(Finder::class)) {
-            throw new \LogicException(sprintf('You cannot use "%s" as the "symfony/finder" package is not installed. Try running "composer require symfony/finder".', static::class));
-        }
-
         $finder = new Finder();
 
         return $finder->files()->name('*.php')->in($directory);

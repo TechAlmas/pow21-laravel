@@ -21,7 +21,7 @@ class Recaller
      */
     public function __construct($recaller)
     {
-        $this->recaller = @unserialize($recaller, ['allowed_classes' => false]) ?: $recaller;
+        $this->recaller = $recaller;
     }
 
     /**
@@ -83,6 +83,6 @@ class Recaller
     {
         $segments = explode('|', $this->recaller);
 
-        return count($segments) === 3 && trim($segments[0]) !== '' && trim($segments[1]) !== '';
+        return count($segments) == 3 && trim($segments[0]) !== '' && trim($segments[1]) !== '';
     }
 }

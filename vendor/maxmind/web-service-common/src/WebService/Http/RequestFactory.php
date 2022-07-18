@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace MaxMind\WebService\Http;
 
 /**
@@ -11,38 +9,18 @@ namespace MaxMind\WebService\Http;
  */
 class RequestFactory
 {
+    public function __construct()
+    {
+    }
+
     /**
-     * Keep the cURL resource here, so that if there are multiple API requests
-     * done the connection is kept alive, SSL resumption can be used
-     * etcetera.
+     * @param $url
+     * @param $options
      *
-     * @var \CurlHandle|null
+     * @return CurlRequest
      */
-    private $ch;
-
-    public function __destruct()
+    public function request($url, $options)
     {
-        if (!empty($this->ch)) {
-            curl_close($this->ch);
-        }
-    }
-
-    /**
-     * @return \CurlHandle
-     */
-    private function getCurlHandle()
-    {
-        if (empty($this->ch)) {
-            $this->ch = curl_init();
-        }
-
-        return $this->ch;
-    }
-
-    public function request(string $url, array $options): Request
-    {
-        $options['curlHandle'] = $this->getCurlHandle();
-
         return new CurlRequest($url, $options);
     }
 }

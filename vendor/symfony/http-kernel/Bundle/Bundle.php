@@ -11,14 +11,15 @@
 
 namespace Symfony\Component\HttpKernel\Bundle;
 
-use Symfony\Component\Console\Application;
-use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Container;
+use Symfony\Component\Console\Application;
 use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
 
 /**
- * An implementation of BundleInterface that adds a few conventions for DependencyInjection extensions.
+ * An implementation of BundleInterface that adds a few conventions
+ * for DependencyInjection extensions and Console commands.
  *
  * @author Fabien Potencier <fabien@symfony.com>
  */
@@ -32,21 +33,23 @@ abstract class Bundle implements BundleInterface
     private $namespace;
 
     /**
-     * {@inheritdoc}
+     * Boots the Bundle.
      */
     public function boot()
     {
     }
 
     /**
-     * {@inheritdoc}
+     * Shutdowns the Bundle.
      */
     public function shutdown()
     {
     }
 
     /**
-     * {@inheritdoc}
+     * Builds the bundle.
+     *
+     * It is only ever called once when the cache is empty.
      *
      * This method can be overridden to register compilation passes,
      * other extensions, ...
@@ -58,7 +61,7 @@ abstract class Bundle implements BundleInterface
     /**
      * Returns the bundle's container extension.
      *
-     * @return ExtensionInterface|null
+     * @return ExtensionInterface|null The container extension
      *
      * @throws \LogicException
      */
@@ -69,7 +72,7 @@ abstract class Bundle implements BundleInterface
 
             if (null !== $extension) {
                 if (!$extension instanceof ExtensionInterface) {
-                    throw new \LogicException(sprintf('Extension "%s" must implement Symfony\Component\DependencyInjection\Extension\ExtensionInterface.', get_debug_type($extension)));
+                    throw new \LogicException(sprintf('Extension %s must implement Symfony\Component\DependencyInjection\Extension\ExtensionInterface.', get_class($extension)));
                 }
 
                 // check naming convention
@@ -77,7 +80,10 @@ abstract class Bundle implements BundleInterface
                 $expectedAlias = Container::underscore($basename);
 
                 if ($expectedAlias != $extension->getAlias()) {
-                    throw new \LogicException(sprintf('Users will expect the alias of the default extension of a bundle to be the underscored version of the bundle name ("%s"). You can override "Bundle::getContainerExtension()" if you want to use "%s" or another alias.', $expectedAlias, $extension->getAlias()));
+                    throw new \LogicException(sprintf(
+                        'Users will expect the alias of the default extension of a bundle to be the underscored version of the bundle name ("%s"). You can override "Bundle::getContainerExtension()" if you want to use "%s" or another alias.',
+                        $expectedAlias, $extension->getAlias()
+                    ));
                 }
 
                 $this->extension = $extension;
@@ -86,11 +92,15 @@ abstract class Bundle implements BundleInterface
             }
         }
 
-        return $this->extension ?: null;
+        if ($this->extension) {
+            return $this->extension;
+        }
     }
 
     /**
-     * {@inheritdoc}
+     * Gets the Bundle namespace.
+     *
+     * @return string The Bundle namespace
      */
     public function getNamespace()
     {
@@ -102,13 +112,15 @@ abstract class Bundle implements BundleInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Gets the Bundle directory path.
+     *
+     * @return string The Bundle absolute path
      */
     public function getPath()
     {
         if (null === $this->path) {
             $reflected = new \ReflectionObject($this);
-            $this->path = \dirname($reflected->getFileName());
+            $this->path = dirname($reflected->getFileName());
         }
 
         return $this->path;
@@ -116,8 +128,10 @@ abstract class Bundle implements BundleInterface
 
     /**
      * Returns the bundle name (the class short name).
+     *
+     * @return string The Bundle name
      */
-    final public function getName(): string
+    final public function getName()
     {
         if (null === $this->name) {
             $this->parseClassName();
@@ -149,7 +163,9 @@ abstract class Bundle implements BundleInterface
      */
     protected function createContainerExtension()
     {
-        return class_exists($class = $this->getContainerExtensionClass()) ? new $class() : null;
+        if (class_exists($class = $this->getContainerExtensionClass())) {
+            return new $class();
+        }
     }
 
     private function parseClassName()

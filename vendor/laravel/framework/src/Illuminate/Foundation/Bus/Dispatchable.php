@@ -3,7 +3,6 @@
 namespace Illuminate\Foundation\Bus;
 
 use Illuminate\Contracts\Bus\Dispatcher;
-use Illuminate\Support\Fluent;
 
 trait Dispatchable
 {
@@ -12,71 +11,19 @@ trait Dispatchable
      *
      * @return \Illuminate\Foundation\Bus\PendingDispatch
      */
-    public static function dispatch(...$arguments)
+    public static function dispatch()
     {
-        return new PendingDispatch(new static(...$arguments));
-    }
-
-    /**
-     * Dispatch the job with the given arguments if the given truth test passes.
-     *
-     * @param  bool  $boolean
-     * @param  mixed  ...$arguments
-     * @return \Illuminate\Foundation\Bus\PendingDispatch|\Illuminate\Support\Fluent
-     */
-    public static function dispatchIf($boolean, ...$arguments)
-    {
-        return $boolean
-            ? new PendingDispatch(new static(...$arguments))
-            : new Fluent;
-    }
-
-    /**
-     * Dispatch the job with the given arguments unless the given truth test passes.
-     *
-     * @param  bool  $boolean
-     * @param  mixed  ...$arguments
-     * @return \Illuminate\Foundation\Bus\PendingDispatch|\Illuminate\Support\Fluent
-     */
-    public static function dispatchUnless($boolean, ...$arguments)
-    {
-        return ! $boolean
-            ? new PendingDispatch(new static(...$arguments))
-            : new Fluent;
-    }
-
-    /**
-     * Dispatch a command to its appropriate handler in the current process.
-     *
-     * Queueable jobs will be dispatched to the "sync" queue.
-     *
-     * @return mixed
-     */
-    public static function dispatchSync(...$arguments)
-    {
-        return app(Dispatcher::class)->dispatchSync(new static(...$arguments));
+        return new PendingDispatch(new static(...func_get_args()));
     }
 
     /**
      * Dispatch a command to its appropriate handler in the current process.
      *
      * @return mixed
-     *
-     * @deprecated Will be removed in a future Laravel version.
      */
-    public static function dispatchNow(...$arguments)
+    public static function dispatchNow()
     {
-        return app(Dispatcher::class)->dispatchNow(new static(...$arguments));
-    }
-
-    /**
-     * Dispatch a command to its appropriate handler after the current process.
-     *
-     * @return mixed
-     */
-    public static function dispatchAfterResponse(...$arguments)
-    {
-        return app(Dispatcher::class)->dispatchAfterResponse(new static(...$arguments));
+        return app(Dispatcher::class)->dispatchNow(new static(...func_get_args()));
     }
 
     /**
@@ -87,6 +34,6 @@ trait Dispatchable
      */
     public static function withChain($chain)
     {
-        return new PendingChain(static::class, $chain);
+        return new PendingChain(get_called_class(), $chain);
     }
 }

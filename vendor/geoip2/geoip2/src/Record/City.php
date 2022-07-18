@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace GeoIp2\Record;
 
 /**
@@ -26,8 +24,6 @@ class City extends AbstractPlaceRecord
 {
     /**
      * @ignore
-     *
-     * @var array<string>
      */
     protected $validAttributes = ['confidence', 'geonameId', 'names'];
 }

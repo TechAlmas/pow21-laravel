@@ -2,14 +2,14 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>{{ ($page_title)?get_setting('appname').': '.strip_tags($page_title):"Admin Area" }}</title>
+    <title>{{ ($page_title)?Session::get('appname').': '.strip_tags($page_title):"Admin Area" }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}"/>
-    <meta name='generator' content='CRUDBooster {{ \crocodicstudio\crudbooster\commands\CrudboosterVersionCommand::$version }}'/>
+    <meta name='generator' content='CRUDBooster 5.4.6'/>
     <meta name='robots' content='noindex,nofollow'/>
     <link rel="shortcut icon"
           href="{{ CRUDBooster::getSetting('favicon')?asset(CRUDBooster::getSetting('favicon')):asset('vendor/crudbooster/assets/logo_crudbooster.png') }}">
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <!-- Bootstrap 3.4.1 -->
+    <!-- Bootstrap 3.3.2 -->
     <link href="{{ asset("vendor/crudbooster/assets/adminlte/bootstrap/css/bootstrap.min.css") }}" rel="stylesheet" type="text/css"/>
     <!-- Font Awesome Icons -->
     <link href="{{asset("vendor/crudbooster/assets/adminlte/font-awesome/css")}}/font-awesome.min.css" rel="stylesheet" type="text/css"/>
@@ -25,7 +25,7 @@
         <link href="{{ asset("vendor/crudbooster/assets/rtl.css")}}" rel="stylesheet" type="text/css"/>
     @endif
 
-    <link rel='stylesheet' href='{{asset("vendor/crudbooster/assets/css/main.css") }}'/>
+    <link rel='stylesheet' href='{{asset("vendor/crudbooster/assets/css/main.css").'?r='.time()}}'/>
 
     <!-- load css -->
     <style type="text/css">
@@ -78,10 +78,6 @@
         .form-group > label:first-child {
             display: block
         }
-
-        #table_dashboard.table-bordered, #table_dashboard.table-bordered thead tr th, #table_dashboard.table-bordered tbody tr td {
-            border: 1px solid #bbbbbb !important;
-        }
     </style>
 
     @stack('head')
@@ -104,23 +100,22 @@
             ?>
             @if($module)
                 <h1>
-                    <!--Now you can define $page_icon alongside $page_tite for custom forms to follow CRUDBooster theme style -->
-                    <i class='{!! ($page_icon)?:$module->icon !!}'></i> {!! ucwords(($page_title)?:$module->name) !!} &nbsp;&nbsp;
+                    <i class='{{$module->icon}}'></i> {{($page_title)?:$module->name}} &nbsp;&nbsp;
 
                     <!--START BUTTON -->
 
                     @if(CRUDBooster::getCurrentMethod() == 'getIndex')
                         @if($button_show)
                             <a href="{{ CRUDBooster::mainpath().'?'.http_build_query(Request::all()) }}" id='btn_show_data' class="btn btn-sm btn-primary"
-                               title="{{cbLang('action_show_data')}}">
-                                <i class="fa fa-table"></i> {{cbLang('action_show_data')}}
+                               title="{{trans('crudbooster.action_show_data')}}">
+                                <i class="fa fa-table"></i> {{trans('crudbooster.action_show_data')}}
                             </a>
                         @endif
 
                         @if($button_add && CRUDBooster::isCreate())
                             <a href="{{ CRUDBooster::mainpath('add').'?return_url='.urlencode(Request::fullUrl()).'&parent_id='.g('parent_id').'&parent_field='.$parent_field }}"
-                               id='btn_add_new_data' class="btn btn-sm btn-success" title="{{cbLang('action_add_data')}}">
-                                <i class="fa fa-plus-circle"></i> {{cbLang('action_add_data')}}
+                               id='btn_add_new_data' class="btn btn-sm btn-success" title="{{trans('crudbooster.action_add_data')}}">
+                                <i class="fa fa-plus-circle"></i> {{trans('crudbooster.action_add_data')}}
                             </a>
                         @endif
                     @endif
@@ -129,19 +124,19 @@
                     @if($button_export && CRUDBooster::getCurrentMethod() == 'getIndex')
                         <a href="javascript:void(0)" id='btn_export_data' data-url-parameter='{{$build_query}}' title='Export Data'
                            class="btn btn-sm btn-primary btn-export-data">
-                            <i class="fa fa-upload"></i> {{cbLang("button_export")}}
+                            <i class="fa fa-upload"></i> {{trans("crudbooster.button_export")}}
                         </a>
                     @endif
 
                     @if($button_import && CRUDBooster::getCurrentMethod() == 'getIndex')
                         <a href="{{ CRUDBooster::mainpath('import-data') }}" id='btn_import_data' data-url-parameter='{{$build_query}}' title='Import Data'
                            class="btn btn-sm btn-primary btn-import-data">
-                            <i class="fa fa-download"></i> {{cbLang("button_import")}}
+                            <i class="fa fa-download"></i> {{trans("crudbooster.button_import")}}
                         </a>
                     @endif
 
                 <!--ADD ACTIon-->
-                    @if(!empty($index_button))
+                    @if(count($index_button))
 
                         @foreach($index_button as $ib)
                             <a href='{{$ib["url"]}}' id='{{str_slug($ib["label"])}}' class='btn {{($ib['color'])?'btn-'.$ib['color']:'btn-primary'}} btn-sm'
@@ -160,12 +155,12 @@
 
 
                 <ol class="breadcrumb">
-                    <li><a href="{{CRUDBooster::adminPath()}}"><i class="fa fa-dashboard"></i> {{ cbLang('home') }}</a></li>
+                    <li><a href="{{CRUDBooster::adminPath()}}"><i class="fa fa-dashboard"></i> {{ trans('crudbooster.home') }}</a></li>
                     <li class="active">{{$module->name}}</li>
                 </ol>
             @else
                 <h1>{{Session::get('appname')}}
-                    <small> {{ cbLang('text_dashboard') }} </small>
+                    <small>Information</small>
                 </h1>
             @endif
         </section>
@@ -186,7 +181,7 @@
             @if (Session::get('message')!='')
                 <div class='alert alert-{{ Session::get("message_type") }}'>
                     <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
-                    <h4><i class="icon fa fa-info"></i> {{ cbLang("alert_".Session::get("message_type")) }}</h4>
+                    <h4><i class="icon fa fa-info"></i> {{ trans("crudbooster.alert_".Session::get("message_type")) }}</h4>
                     {!!Session::get('message')!!}
                 </div>
             @endif

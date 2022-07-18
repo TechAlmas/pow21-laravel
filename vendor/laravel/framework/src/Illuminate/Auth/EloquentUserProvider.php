@@ -2,12 +2,10 @@
 
 namespace Illuminate\Auth;
 
-use Closure;
-use Illuminate\Contracts\Auth\Authenticatable as UserContract;
+use Illuminate\Support\Str;
 use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Contracts\Hashing\Hasher as HasherContract;
-use Illuminate\Contracts\Support\Arrayable;
-use Illuminate\Support\Str;
+use Illuminate\Contracts\Auth\Authenticatable as UserContract;
 
 class EloquentUserProvider implements UserProvider
 {
@@ -48,9 +46,9 @@ class EloquentUserProvider implements UserProvider
     {
         $model = $this->createModel();
 
-        return $this->newModelQuery($model)
-                    ->where($model->getAuthIdentifierName(), $identifier)
-                    ->first();
+        return $model->newQuery()
+            ->where($model->getAuthIdentifierName(), $identifier)
+            ->first();
     }
 
     /**
@@ -64,24 +62,21 @@ class EloquentUserProvider implements UserProvider
     {
         $model = $this->createModel();
 
-        $retrievedModel = $this->newModelQuery($model)->where(
-            $model->getAuthIdentifierName(), $identifier
-        )->first();
+        $model = $model->where($model->getAuthIdentifierName(), $identifier)->first();
 
-        if (! $retrievedModel) {
-            return;
+        if (! $model) {
+            return null;
         }
 
-        $rememberToken = $retrievedModel->getRememberToken();
+        $rememberToken = $model->getRememberToken();
 
-        return $rememberToken && hash_equals($rememberToken, $token)
-                        ? $retrievedModel : null;
+        return $rememberToken && hash_equals($rememberToken, $token) ? $model : null;
     }
 
     /**
      * Update the "remember me" token for the given user in storage.
      *
-     * @param  \Illuminate\Contracts\Auth\Authenticatable|\Illuminate\Database\Eloquent\Model  $user
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
      * @param  string  $token
      * @return void
      */
@@ -108,43 +103,22 @@ class EloquentUserProvider implements UserProvider
     {
         if (empty($credentials) ||
            (count($credentials) === 1 &&
-            Str::contains($this->firstCredentialKey($credentials), 'password'))) {
+            array_key_exists('password', $credentials))) {
             return;
         }
 
         // First we will add each credential element to the query as a where clause.
         // Then we can execute the query and, if we found a user, return it in a
         // Eloquent User "model" that will be utilized by the Guard instances.
-        $query = $this->newModelQuery();
+        $query = $this->createModel()->newQuery();
 
         foreach ($credentials as $key => $value) {
-            if (Str::contains($key, 'password')) {
-                continue;
-            }
-
-            if (is_array($value) || $value instanceof Arrayable) {
-                $query->whereIn($key, $value);
-            } elseif ($value instanceof Closure) {
-                $value($query);
-            } else {
+            if (! Str::contains($key, 'password')) {
                 $query->where($key, $value);
             }
         }
 
         return $query->first();
-    }
-
-    /**
-     * Get the first key from the credential array.
-     *
-     * @param  array  $credentials
-     * @return string|null
-     */
-    protected function firstCredentialKey(array $credentials)
-    {
-        foreach ($credentials as $key => $value) {
-            return $key;
-        }
     }
 
     /**
@@ -159,19 +133,6 @@ class EloquentUserProvider implements UserProvider
         $plain = $credentials['password'];
 
         return $this->hasher->check($plain, $user->getAuthPassword());
-    }
-
-    /**
-     * Get a new query builder for the model instance.
-     *
-     * @param  \Illuminate\Database\Eloquent\Model|null  $model
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    protected function newModelQuery($model = null)
-    {
-        return is_null($model)
-                ? $this->createModel()->newQuery()
-                : $model->newQuery();
     }
 
     /**

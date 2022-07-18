@@ -5,7 +5,7 @@ namespace Illuminate\View;
 class ViewName
 {
     /**
-     * Normalize the given view name.
+     * Normalize the given event name.
      *
      * @param  string  $name
      * @return string
@@ -18,7 +18,7 @@ class ViewName
             return str_replace('/', '.', $name);
         }
 
-        [$namespace, $name] = explode($delimiter, $name);
+        list($namespace, $name) = explode($delimiter, $name);
 
         return $namespace.$delimiter.str_replace('/', '.', $name);
     }

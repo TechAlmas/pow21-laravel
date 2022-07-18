@@ -22,7 +22,7 @@ class Cookie
      * Handles dates as defined by RFC 2616 section 3.3.1, and also some other
      * non-standard, but common formats.
      */
-    private const DATE_FORMATS = [
+    private static $dateFormats = [
         'D, d M Y H:i:s T',
         'D, d-M-y H:i:s T',
         'D, d-M-Y H:i:s T',
@@ -46,7 +46,7 @@ class Cookie
      * Sets a cookie.
      *
      * @param string      $name         The cookie name
-     * @param string|null $value        The value of the cookie
+     * @param string      $value        The value of the cookie
      * @param string|null $expires      The time the cookie expires
      * @param string|null $path         The path on the server in which the cookie will be available on
      * @param string      $domain       The domain that the cookie is available
@@ -62,7 +62,7 @@ class Cookie
             $this->rawValue = $value;
         } else {
             $this->value = $value;
-            $this->rawValue = rawurlencode($value ?? '');
+            $this->rawValue = rawurlencode($value);
         }
         $this->name = $name;
         $this->path = empty($path) ? '/' : $path;
@@ -83,8 +83,6 @@ class Cookie
 
     /**
      * Returns the HTTP representation of the Cookie.
-     *
-     * @return string
      */
     public function __toString()
     {
@@ -92,7 +90,7 @@ class Cookie
 
         if (null !== $this->expires) {
             $dateTime = \DateTime::createFromFormat('U', $this->expires, new \DateTimeZone('GMT'));
-            $cookie .= '; expires='.str_replace('+0000', '', $dateTime->format(self::DATE_FORMATS[0]));
+            $cookie .= '; expires='.str_replace('+0000', '', $dateTime->format(self::$dateFormats[0]));
         }
 
         if ('' !== $this->domain) {
@@ -121,19 +119,22 @@ class Cookie
     /**
      * Creates a Cookie instance from a Set-Cookie header value.
      *
+     * @param string      $cookie A Set-Cookie header value
+     * @param string|null $url    The base URL
+     *
      * @return static
      *
      * @throws \InvalidArgumentException
      */
-    public static function fromString(string $cookie, string $url = null)
+    public static function fromString($cookie, $url = null)
     {
         $parts = explode(';', $cookie);
 
-        if (!str_contains($parts[0], '=')) {
+        if (false === strpos($parts[0], '=')) {
             throw new \InvalidArgumentException(sprintf('The cookie string "%s" is not valid.', $parts[0]));
         }
 
-        [$name, $value] = explode('=', array_shift($parts), 2);
+        list($name, $value) = explode('=', array_shift($parts), 2);
 
         $values = [
             'name' => trim($name),
@@ -198,14 +199,19 @@ class Cookie
         );
     }
 
-    private static function parseDate(string $dateValue): ?string
+    /**
+     * @param string $dateValue
+     *
+     * @return string|null
+     */
+    private static function parseDate($dateValue)
     {
         // trim single quotes around date if present
         if (($length = \strlen($dateValue)) > 1 && "'" === $dateValue[0] && "'" === $dateValue[$length - 1]) {
             $dateValue = substr($dateValue, 1, -1);
         }
 
-        foreach (self::DATE_FORMATS as $dateFormat) {
+        foreach (self::$dateFormats as $dateFormat) {
             if (false !== $date = \DateTime::createFromFormat($dateFormat, $dateValue, new \DateTimeZone('GMT'))) {
                 return $date->format('U');
             }
@@ -222,7 +228,7 @@ class Cookie
     /**
      * Gets the name of the cookie.
      *
-     * @return string
+     * @return string The cookie name
      */
     public function getName()
     {
@@ -232,7 +238,7 @@ class Cookie
     /**
      * Gets the value of the cookie.
      *
-     * @return string
+     * @return string The cookie value
      */
     public function getValue()
     {
@@ -242,7 +248,7 @@ class Cookie
     /**
      * Gets the raw value of the cookie.
      *
-     * @return string
+     * @return string The cookie value
      */
     public function getRawValue()
     {
@@ -252,7 +258,7 @@ class Cookie
     /**
      * Gets the expires time of the cookie.
      *
-     * @return string|null
+     * @return string|null The cookie expires time
      */
     public function getExpiresTime()
     {
@@ -262,7 +268,7 @@ class Cookie
     /**
      * Gets the path of the cookie.
      *
-     * @return string
+     * @return string The cookie path
      */
     public function getPath()
     {
@@ -272,7 +278,7 @@ class Cookie
     /**
      * Gets the domain of the cookie.
      *
-     * @return string
+     * @return string The cookie domain
      */
     public function getDomain()
     {
@@ -282,7 +288,7 @@ class Cookie
     /**
      * Returns the secure flag of the cookie.
      *
-     * @return bool
+     * @return bool The cookie secure flag
      */
     public function isSecure()
     {
@@ -292,7 +298,7 @@ class Cookie
     /**
      * Returns the httponly flag of the cookie.
      *
-     * @return bool
+     * @return bool The cookie httponly flag
      */
     public function isHttpOnly()
     {
@@ -302,15 +308,17 @@ class Cookie
     /**
      * Returns true if the cookie has expired.
      *
-     * @return bool
+     * @return bool true if the cookie has expired, false otherwise
      */
     public function isExpired()
     {
-        return null !== $this->expires && 0 != $this->expires && $this->expires <= time();
+        return null !== $this->expires && 0 != $this->expires && $this->expires < time();
     }
 
     /**
      * Gets the samesite attribute of the cookie.
+     *
+     * @return string|null The cookie samesite attribute
      */
     public function getSameSite(): ?string
     {

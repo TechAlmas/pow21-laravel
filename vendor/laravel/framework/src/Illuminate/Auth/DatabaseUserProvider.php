@@ -2,13 +2,11 @@
 
 namespace Illuminate\Auth;
 
-use Closure;
-use Illuminate\Contracts\Auth\Authenticatable as UserContract;
-use Illuminate\Contracts\Auth\UserProvider;
-use Illuminate\Contracts\Hashing\Hasher as HasherContract;
-use Illuminate\Contracts\Support\Arrayable;
-use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Str;
+use Illuminate\Contracts\Auth\UserProvider;
+use Illuminate\Database\ConnectionInterface;
+use Illuminate\Contracts\Hashing\Hasher as HasherContract;
+use Illuminate\Contracts\Auth\Authenticatable as UserContract;
 
 class DatabaseUserProvider implements UserProvider
 {
@@ -112,15 +110,7 @@ class DatabaseUserProvider implements UserProvider
         $query = $this->conn->table($this->table);
 
         foreach ($credentials as $key => $value) {
-            if (Str::contains($key, 'password')) {
-                continue;
-            }
-
-            if (is_array($value) || $value instanceof Arrayable) {
-                $query->whereIn($key, $value);
-            } elseif ($value instanceof Closure) {
-                $value($query);
-            } else {
+            if (! Str::contains($key, 'password')) {
                 $query->where($key, $value);
             }
         }

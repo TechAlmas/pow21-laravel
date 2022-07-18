@@ -18,23 +18,21 @@ namespace Symfony\Component\Finder\Iterator;
  * to remove files.
  *
  * @author Fabien Potencier <fabien@symfony.com>
- *
- * @extends \FilterIterator<string, \SplFileInfo>
  */
 class CustomFilterIterator extends \FilterIterator
 {
-    private $filters = [];
+    private $filters = array();
 
     /**
-     * @param \Iterator<string, \SplFileInfo> $iterator The Iterator to filter
-     * @param callable[]                      $filters  An array of PHP callbacks
+     * @param \Iterator  $iterator The Iterator to filter
+     * @param callable[] $filters  An array of PHP callbacks
      *
      * @throws \InvalidArgumentException
      */
     public function __construct(\Iterator $iterator, array $filters)
     {
         foreach ($filters as $filter) {
-            if (!\is_callable($filter)) {
+            if (!is_callable($filter)) {
                 throw new \InvalidArgumentException('Invalid PHP callback.');
             }
         }
@@ -46,15 +44,14 @@ class CustomFilterIterator extends \FilterIterator
     /**
      * Filters the iterator values.
      *
-     * @return bool
+     * @return bool true if the value should be kept, false otherwise
      */
-    #[\ReturnTypeWillChange]
     public function accept()
     {
         $fileinfo = $this->current();
 
         foreach ($this->filters as $filter) {
-            if (false === $filter($fileinfo)) {
+            if (false === call_user_func($filter, $fileinfo)) {
                 return false;
             }
         }

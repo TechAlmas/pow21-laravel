@@ -27,10 +27,6 @@ class ResettableServicePass implements CompilerPassInterface
 
     public function __construct(string $tagName = 'kernel.reset')
     {
-        if (0 < \func_num_args()) {
-            trigger_deprecation('symfony/http-kernel', '5.3', 'Configuring "%s" is deprecated.', __CLASS__);
-        }
-
         $this->tagName = $tagName;
     }
 
@@ -43,29 +39,20 @@ class ResettableServicePass implements CompilerPassInterface
             return;
         }
 
-        $services = $methods = [];
+        $services = $methods = array();
 
         foreach ($container->findTaggedServiceIds($this->tagName, true) as $id => $tags) {
             $services[$id] = new Reference($id, ContainerInterface::IGNORE_ON_UNINITIALIZED_REFERENCE);
+            $attributes = $tags[0];
 
-            foreach ($tags as $attributes) {
-                if (!isset($attributes['method'])) {
-                    throw new RuntimeException(sprintf('Tag "%s" requires the "method" attribute to be set.', $this->tagName));
-                }
-
-                if (!isset($methods[$id])) {
-                    $methods[$id] = [];
-                }
-
-                if ('ignore' === ($attributes['on_invalid'] ?? null)) {
-                    $attributes['method'] = '?'.$attributes['method'];
-                }
-
-                $methods[$id][] = $attributes['method'];
+            if (!isset($attributes['method'])) {
+                throw new RuntimeException(sprintf('Tag %s requires the "method" attribute to be set.', $this->tagName));
             }
+
+            $methods[$id] = $attributes['method'];
         }
 
-        if (!$services) {
+        if (empty($services)) {
             $container->removeAlias('services_resetter');
             $container->removeDefinition('services_resetter');
 
